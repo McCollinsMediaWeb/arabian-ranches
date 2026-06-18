@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine target recipient email
-    const recipientEmail = process.env.NOTIFICATION_EMAIL || "ijas@mccollinsmedia.com";
+    const recipientEmail = process.env.NOTIFICATION_EMAIL || "ijas@mccollinsmedia.com, meghna@mccollinsmedia.com";
 
     // Build the email details based on the form type
     let subject = "";
