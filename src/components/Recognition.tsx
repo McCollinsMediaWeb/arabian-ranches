@@ -60,12 +60,15 @@ export function Recognition() {
 
   const totalVotes = Object.values(votes).reduce((a, b) => a + b, 0);
 
-  const textVariants = {
-    hidden: { opacity: 0, y: 25 },
+    const textVariants = {
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as const },
+      transition: {
+        duration: 1.2,
+        ease: [0.16, 1, 0.3, 1] as const,
+      },
     },
   };
 

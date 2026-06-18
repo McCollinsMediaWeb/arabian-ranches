@@ -93,12 +93,24 @@ export function Buddy() {
     }
   };
 
-  const textVariants = {
-    hidden: { opacity: 0, y: 25 },
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+    const textVariants = {
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as const },
+      transition: {
+        duration: 1.2,
+        ease: [0.16, 1, 0.3, 1] as const,
+      },
     },
   };
 
@@ -107,7 +119,16 @@ export function Buddy() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as const },
+      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as const, staggerChildren: 0.08 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const },
     },
   };
 
@@ -117,10 +138,7 @@ export function Buddy() {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-100px" }}
-      variants={{
-        hidden: {},
-        visible: { transition: { staggerChildren: 0.1 } },
-      }}
+      variants={containerVariants}
     >
       <div className="container">
         <motion.div className="section-label" variants={textVariants}>
@@ -143,17 +161,21 @@ export function Buddy() {
         <div className="buddy-grid">
           {/* Card 1: Become a Buddy */}
           <motion.div className="buddy-card" variants={cardVariants}>
-            <div className="buddy-card-header">
+            <motion.div className="buddy-card-header" variants={itemVariants}>
               <div className="buddy-icon">♡</div>
               <h3>Become a Buddy</h3>
-            </div>
-            <p className="sub">
+            </motion.div>
+            <motion.p className="sub" variants={itemVariants}>
               Offer your time and care to neighbours who'd like a buddy. You can
               choose one task or many — and we'll match you thoughtfully.
-            </p>
+            </motion.p>
 
-            <form id="signupBuddyForm" onSubmit={handleBecomeBuddySubmit}>
-              <div className="b-group">
+            <motion.form
+              id="signupBuddyForm"
+              onSubmit={handleBecomeBuddySubmit}
+              variants={containerVariants}
+            >
+              <motion.div className="b-group" variants={itemVariants}>
                 <label>Your name</label>
                 <input
                   type="text"
@@ -162,8 +184,8 @@ export function Buddy() {
                   onChange={(e) => setBName(e.target.value)}
                   placeholder="e.g. Fatima Al Marri"
                 />
-              </div>
-              <div className="b-group">
+              </motion.div>
+              <motion.div className="b-group" variants={itemVariants}>
                 <label>WhatsApp number</label>
                 <input
                   type="tel"
@@ -172,8 +194,8 @@ export function Buddy() {
                   onChange={(e) => setBPhone(e.target.value)}
                   placeholder="+971 50 000 0000"
                 />
-              </div>
-              <div className="b-group">
+              </motion.div>
+              <motion.div className="b-group" variants={itemVariants}>
                 <label>I'm happy to help with…</label>
                 <div className="task-grid">
                   {buddyTasks.map((task) => (
@@ -193,8 +215,8 @@ export function Buddy() {
                     </label>
                   ))}
                 </div>
-              </div>
-              <div className="b-group">
+              </motion.div>
+              <motion.div className="b-group" variants={itemVariants}>
                 <label>I'm usually free…</label>
                 <select
                   required
@@ -208,12 +230,13 @@ export function Buddy() {
                   <option>Weekends</option>
                   <option>Flexible — just ask me</option>
                 </select>
-              </div>
+              </motion.div>
               <motion.button
                 type="submit"
                 className="buddy-submit"
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
+                variants={itemVariants}
               >
                 Sign me up as a buddy
               </motion.button>
@@ -232,23 +255,27 @@ export function Buddy() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </form>
+            </motion.form>
           </motion.div>
 
           {/* Card 2: Request a Buddy */}
           <motion.div className="buddy-card dark" variants={cardVariants}>
-            <div className="buddy-card-header">
+            <motion.div className="buddy-card-header" variants={itemVariants}>
               <div className="buddy-icon">→</div>
               <h3>Request a Buddy</h3>
-            </div>
-            <p className="sub">
+            </motion.div>
+            <motion.p className="sub" variants={itemVariants}>
               Need a hand — for one little thing, or a few? Tell us how we can
               help. Everything is kept private between you and your matched
               buddy.
-            </p>
+            </motion.p>
 
-            <form id="requestBuddyForm" onSubmit={handleRequestBuddySubmit}>
-              <div className="b-group">
+            <motion.form
+              id="requestBuddyForm"
+              onSubmit={handleRequestBuddySubmit}
+              variants={containerVariants}
+            >
+              <motion.div className="b-group" variants={itemVariants}>
                 <label>Your name</label>
                 <input
                   type="text"
@@ -257,8 +284,8 @@ export function Buddy() {
                   onChange={(e) => setRName(e.target.value)}
                   placeholder="e.g. Margaret O'Connor"
                 />
-              </div>
-              <div className="b-group">
+              </motion.div>
+              <motion.div className="b-group" variants={itemVariants}>
                 <label>WhatsApp number</label>
                 <input
                   type="tel"
@@ -267,8 +294,8 @@ export function Buddy() {
                   onChange={(e) => setRPhone(e.target.value)}
                   placeholder="+971 50 000 0000"
                 />
-              </div>
-              <div className="b-group">
+              </motion.div>
+              <motion.div className="b-group" variants={itemVariants}>
                 <label>I'd love a buddy for…</label>
                 <div className="task-grid">
                   {requestTasks.map((task) => (
@@ -288,8 +315,8 @@ export function Buddy() {
                     </label>
                   ))}
                 </div>
-              </div>
-              <div className="b-group">
+              </motion.div>
+              <motion.div className="b-group" variants={itemVariants}>
                 <label>How often / when?</label>
                 <select
                   required
@@ -302,12 +329,13 @@ export function Buddy() {
                   <option>Fortnightly</option>
                   <option>As and when I need</option>
                 </select>
-              </div>
+              </motion.div>
               <motion.button
                 type="submit"
                 className="buddy-submit"
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
+                variants={itemVariants}
               >
                 Request a buddy
               </motion.button>
@@ -326,7 +354,7 @@ export function Buddy() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </form>
+            </motion.form>
           </motion.div>
         </div>
       </div>

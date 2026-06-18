@@ -246,6 +246,27 @@ export function SnapshotStrip() {
     },
   ];
 
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+    const textVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 1.2,
+        ease: [0.16, 1, 0.3, 1] as const,
+      },
+    },
+  };
+
   const listVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -271,19 +292,22 @@ export function SnapshotStrip() {
   });
 
   return (
-    <section className="featured-photos">
+    <motion.section
+      className="featured-photos"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-100px" }}
+      variants={containerVariants}
+    >
       <div className="container">
-        <div className="strip-eyebrow">
+        <motion.div className="strip-eyebrow" variants={textVariants}>
           <div className="label">~ recent moments ~</div>
           <div className="sub">a few snapshots from our gatherings</div>
-        </div>
+        </motion.div>
 
         <motion.div
           className="polaroid-strip"
           variants={listVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
         >
           {polaroids.map((p) => (
             <motion.div
@@ -315,10 +339,10 @@ export function SnapshotStrip() {
           ))}
         </motion.div>
 
-        <p className="replace-note">
+        <motion.p className="replace-note" variants={textVariants}>
           ↑ placeholder photos — to be replaced with snapshots from your meet-ups
-        </p>
+        </motion.p>
       </div>
-    </section>
+    </motion.section>
   );
 }

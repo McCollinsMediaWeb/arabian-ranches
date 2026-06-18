@@ -70,13 +70,13 @@ export function Team() {
     },
   };
 
-  const textVariants = {
-    hidden: { opacity: 0, y: 30 },
+    const textVariants = {
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
-        duration: 0.8,
+        duration: 1.2,
         ease: [0.16, 1, 0.3, 1] as const,
       },
     },
@@ -147,9 +147,9 @@ export function Team() {
           ))}
         </motion.div>
 
-        <p className="replace-note" style={{ marginTop: "40px" }}>
+        <motion.p className="replace-note" style={{ marginTop: "40px" }} variants={textVariants}>
           ↑ placeholder avatars — to be replaced with team member photos
-        </p>
+        </motion.p>
       </div>
     </motion.section>
   );

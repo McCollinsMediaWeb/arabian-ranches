@@ -76,12 +76,33 @@ export function Register() {
     }, 100);
   };
 
-  const textVariants = {
-    hidden: { opacity: 0, y: 30 },
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.08,
+      },
+    },
+  };
+
+    const textVariants = {
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as const },
+      transition: {
+        duration: 1.2,
+        ease: [0.16, 1, 0.3, 1] as const,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const },
     },
   };
 
@@ -92,10 +113,7 @@ export function Register() {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-100px" }}
-      variants={{
-        hidden: {},
-        visible: { transition: { staggerChildren: 0.1 } },
-      }}
+      variants={containerVariants}
     >
       <div className="container">
         <motion.div className="section-label" variants={textVariants}>
@@ -109,9 +127,13 @@ export function Register() {
           us a little about who you are and what you'd like to share or learn.
         </motion.p>
 
-        <motion.form id="registerForm" onSubmit={handleSubmit} variants={textVariants}>
+        <motion.form
+          id="registerForm"
+          onSubmit={handleSubmit}
+          variants={containerVariants}
+        >
           <div className="form-grid">
-            <div className="form-group">
+            <motion.div className="form-group" variants={itemVariants}>
               <label htmlFor="name">Full name</label>
               <input
                 type="text"
@@ -121,8 +143,8 @@ export function Register() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Layla Hassan"
               />
-            </div>
-            <div className="form-group">
+            </motion.div>
+            <motion.div className="form-group" variants={itemVariants}>
               <label htmlFor="age">Age</label>
               <select
                 id="age"
@@ -137,8 +159,8 @@ export function Register() {
                 <option>66 – 70</option>
                 <option>71+</option>
               </select>
-            </div>
-            <div className="form-group">
+            </motion.div>
+            <motion.div className="form-group" variants={itemVariants}>
               <label htmlFor="phone">WhatsApp number</label>
               <input
                 type="tel"
@@ -148,8 +170,8 @@ export function Register() {
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+971 50 000 0000"
               />
-            </div>
-            <div className="form-group">
+            </motion.div>
+            <motion.div className="form-group" variants={itemVariants}>
               <label htmlFor="email">Email</label>
               <input
                 type="email"
@@ -159,8 +181,8 @@ export function Register() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="hello@email.com"
               />
-            </div>
-            <div className="form-group">
+            </motion.div>
+            <motion.div className="form-group" variants={itemVariants}>
               <label htmlFor="address">Sub-community in Arabian Ranches</label>
               <select
                 id="address"
@@ -183,8 +205,8 @@ export function Register() {
                 <option>Ranches 2 / Ranches 3</option>
                 <option>Other / Nearby</option>
               </select>
-            </div>
-            <div className="form-group">
+            </motion.div>
+            <motion.div className="form-group" variants={itemVariants}>
               <label htmlFor="registering">Registering for</label>
               <select
                 id="registering"
@@ -197,11 +219,11 @@ export function Register() {
                 <option>My mother</option>
                 <option>A relative or friend (with permission)</option>
               </select>
-            </div>
+            </motion.div>
           </div>
 
           <div className="form-grid full" style={{ marginTop: "28px" }}>
-            <div className="form-group">
+            <motion.div className="form-group" variants={itemVariants}>
               <label>I'd like to share my expertise in… (select all that apply)</label>
               <div className="checkbox-grid">
                 {interests.map((interest) => (
@@ -221,9 +243,9 @@ export function Register() {
                   </label>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            <div className="form-group">
+            <motion.div className="form-group" variants={itemVariants}>
               <label>I'd love to learn about… (select all that apply)</label>
               <div className="checkbox-grid">
                 {interests.map((interest) => (
@@ -243,9 +265,9 @@ export function Register() {
                   </label>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            <div className="form-group">
+            <motion.div className="form-group" variants={itemVariants}>
               <label htmlFor="note">A few words about yourself (optional)</label>
               <textarea
                 id="note"
@@ -254,10 +276,10 @@ export function Register() {
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Tell us a little about who you are — we love getting to know our members."
               ></textarea>
-            </div>
+            </motion.div>
           </div>
 
-          <div className="submit-row">
+          <motion.div className="submit-row" variants={itemVariants}>
             <motion.button
               type="submit"
               className="btn-gold"
@@ -270,7 +292,7 @@ export function Register() {
               By submitting, you agree to our community guidelines. We'll be in
               touch within 5 days.
             </p>
-          </div>
+          </motion.div>
 
           <AnimatePresence>
             {submitted && (
