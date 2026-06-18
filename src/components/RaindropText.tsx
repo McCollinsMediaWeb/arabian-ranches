@@ -26,7 +26,7 @@ export function RaindropText({ text, className }: RaindropTextProps) {
       opacity: 1,
       y: 0,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         damping: 14,
         stiffness: 120,
       },
