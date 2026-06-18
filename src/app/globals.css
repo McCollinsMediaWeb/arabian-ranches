@@ -616,6 +616,16 @@
       display: block;
     }
 
+    .form-error {
+      display: block;
+      padding: 24px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #ef4444;
+      border-radius: 4px;
+      margin-top: 24px;
+      color: #fca5a5;
+    }
+
     /* ===== EVENTS ===== */
     .events-list {
       display: flex;
@@ -1473,6 +1483,23 @@
 
     .buddy-success.show {
       display: block;
+    }
+
+    .buddy-error {
+      display: block;
+      margin-top: 18px;
+      padding: 14px 18px;
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 3px solid #ef4444;
+      border-radius: 0 4px 4px 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #b91c1c;
+    }
+
+    .buddy-card.dark .buddy-error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
     }
 
     /* ===== RECOGNITION ===== */

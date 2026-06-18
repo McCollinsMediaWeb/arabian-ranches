@@ -2,10 +2,16 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FormPopup } from "./FormPopup";
 
 export function Buddy() {
   const [becomeBuddySubmitted, setBecomeBuddySubmitted] = useState(false);
+  const [becomeBuddyLoading, setBecomeBuddyLoading] = useState(false);
+  const [becomeBuddyError, setBecomeBuddyError] = useState<string | null>(null);
+
   const [requestBuddySubmitted, setRequestBuddySubmitted] = useState(false);
+  const [requestBuddyLoading, setRequestBuddyLoading] = useState(false);
+  const [requestBuddyError, setRequestBuddyError] = useState<string | null>(null);
 
   // Form 1 state
   const [bName, setBName] = useState("");
@@ -49,32 +55,82 @@ export function Buddy() {
     "Settling into the neighbourhood",
   ];
 
-  const handleBecomeBuddySubmit = (e: React.FormEvent) => {
+  const handleBecomeBuddySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBecomeBuddySubmitted(true);
-    setBName("");
-    setBPhone("");
-    setBFree("");
-    setBHelpList([]);
+    setBecomeBuddyLoading(true);
+    setBecomeBuddyError(null);
+    setBecomeBuddySubmitted(false);
 
-    setTimeout(() => {
-      const el = document.getElementById("becomeBuddySuccess");
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 100);
+    try {
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          formType: "become-buddy",
+          name: bName,
+          phone: bPhone,
+          free: bFree,
+          helpList: bHelpList,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Something went wrong. Please try again.");
+      }
+
+      setBecomeBuddySubmitted(true);
+      setBName("");
+      setBPhone("");
+      setBFree("");
+      setBHelpList([]);
+    } catch (err: any) {
+      setBecomeBuddyError(err.message || "Failed to submit. Please try again.");
+    } finally {
+      setBecomeBuddyLoading(false);
+    }
   };
 
-  const handleRequestBuddySubmit = (e: React.FormEvent) => {
+  const handleRequestBuddySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setRequestBuddySubmitted(true);
-    setRName("");
-    setRPhone("");
-    setROften("");
-    setRNeedList([]);
+    setRequestBuddyLoading(true);
+    setRequestBuddyError(null);
+    setRequestBuddySubmitted(false);
 
-    setTimeout(() => {
-      const el = document.getElementById("requestBuddySuccess");
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 100);
+    try {
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          formType: "request-buddy",
+          name: rName,
+          phone: rPhone,
+          often: rOften,
+          needList: rNeedList,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Something went wrong. Please try again.");
+      }
+
+      setRequestBuddySubmitted(true);
+      setRName("");
+      setRPhone("");
+      setROften("");
+      setRNeedList([]);
+    } catch (err: any) {
+      setRequestBuddyError(err.message || "Failed to submit. Please try again.");
+    } finally {
+      setRequestBuddyLoading(false);
+    }
   };
 
   const handleHelpChange = (task: string) => {
@@ -234,27 +290,27 @@ export function Buddy() {
               <motion.button
                 type="submit"
                 className="buddy-submit"
-                whileHover={{ scale: 1.03, y: -2 }}
-                whileTap={{ scale: 0.98 }}
+                disabled={becomeBuddyLoading}
+                whileHover={becomeBuddyLoading ? {} : { scale: 1.03, y: -2 }}
+                whileTap={becomeBuddyLoading ? {} : { scale: 0.98 }}
+                style={becomeBuddyLoading ? { opacity: 0.7, cursor: "not-allowed" } : {}}
                 variants={itemVariants}
               >
-                Sign me up as a buddy
+                {becomeBuddyLoading ? "Signing you up..." : "Sign me up as a buddy"}
               </motion.button>
-              <AnimatePresence>
-                {becomeBuddySubmitted && (
-                  <motion.div
-                    id="becomeBuddySuccess"
-                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                    animate={{ height: "auto", opacity: 1, marginTop: 18 }}
-                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                    className="buddy-success show"
-                    style={{ overflow: "hidden" }}
-                  >
-                    ✦ Thank you for opening your heart. A host will be in touch on
-                    WhatsApp soon to welcome you as a buddy.
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <FormPopup
+                isOpen={becomeBuddySubmitted || becomeBuddyError !== null}
+                isSuccess={becomeBuddySubmitted}
+                message={
+                  becomeBuddySubmitted
+                    ? "✦ Thank you for opening your heart. A host will be in touch on WhatsApp soon to welcome you as a buddy."
+                    : becomeBuddyError || ""
+                }
+                onClose={() => {
+                  setBecomeBuddySubmitted(false);
+                  setBecomeBuddyError(null);
+                }}
+              />
             </motion.form>
           </motion.div>
 
@@ -333,27 +389,27 @@ export function Buddy() {
               <motion.button
                 type="submit"
                 className="buddy-submit"
-                whileHover={{ scale: 1.03, y: -2 }}
-                whileTap={{ scale: 0.98 }}
+                disabled={requestBuddyLoading}
+                whileHover={requestBuddyLoading ? {} : { scale: 1.03, y: -2 }}
+                whileTap={requestBuddyLoading ? {} : { scale: 0.98 }}
+                style={requestBuddyLoading ? { opacity: 0.7, cursor: "not-allowed" } : {}}
                 variants={itemVariants}
               >
-                Request a buddy
+                {requestBuddyLoading ? "Sending request..." : "Request a buddy"}
               </motion.button>
-              <AnimatePresence>
-                {requestBuddySubmitted && (
-                  <motion.div
-                    id="requestBuddySuccess"
-                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                    animate={{ height: "auto", opacity: 1, marginTop: 18 }}
-                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                    className="buddy-success show"
-                    style={{ overflow: "hidden" }}
-                  >
-                    ✦ Your request is in. A host will reach out within 48 hours and
-                    quietly match you with a buddy.
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <FormPopup
+                isOpen={requestBuddySubmitted || requestBuddyError !== null}
+                isSuccess={requestBuddySubmitted}
+                message={
+                  requestBuddySubmitted
+                    ? "✦ Your request is in. A host will reach out within 48 hours and quietly match you with a buddy."
+                    : requestBuddyError || ""
+                }
+                onClose={() => {
+                  setRequestBuddySubmitted(false);
+                  setRequestBuddyError(null);
+                }}
+              />
             </motion.form>
           </motion.div>
         </div>

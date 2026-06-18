@@ -2,9 +2,12 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FormPopup } from "./FormPopup";
 
 export function Register() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form fields
   const [name, setName] = useState("");
@@ -52,28 +55,55 @@ export function Register() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError(null);
+    setSubmitted(false);
 
-    // Reset fields
-    setName("");
-    setAge("");
-    setPhone("");
-    setEmail("");
-    setAddress("");
-    setRegistering("");
-    setNote("");
-    setShareList([]);
-    setLearnList([]);
+    try {
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          formType: "register",
+          name,
+          age,
+          phone,
+          email,
+          address,
+          registering,
+          shareList,
+          learnList,
+          note,
+        }),
+      });
 
-    // Scroll to success message
-    setTimeout(() => {
-      const successEl = document.getElementById("formSuccess");
-      if (successEl) {
-        successEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Something went wrong. Please try again.");
       }
-    }, 100);
+
+      setSubmitted(true);
+
+      // Reset fields
+      setName("");
+      setAge("");
+      setPhone("");
+      setEmail("");
+      setAddress("");
+      setRegistering("");
+      setNote("");
+      setShareList([]);
+      setLearnList([]);
+    } catch (err: any) {
+      setError(err.message || "Failed to submit request. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const containerVariants = {
@@ -283,10 +313,12 @@ export function Register() {
             <motion.button
               type="submit"
               className="btn-gold"
-              whileHover={{ scale: 1.03, y: -2 }}
-              whileTap={{ scale: 0.98 }}
+              disabled={loading}
+              whileHover={loading ? {} : { scale: 1.03, y: -2 }}
+              whileTap={loading ? {} : { scale: 0.98 }}
+              style={loading ? { opacity: 0.7, cursor: "not-allowed" } : {}}
             >
-              Send my request
+              {loading ? "Sending request..." : "Send my request"}
             </motion.button>
             <p>
               By submitting, you agree to our community guidelines. We'll be in
@@ -294,21 +326,19 @@ export function Register() {
             </p>
           </motion.div>
 
-          <AnimatePresence>
-            {submitted && (
-              <motion.div
-                initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                animate={{ height: "auto", opacity: 1, marginTop: 24 }}
-                exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                className="form-success show"
-                id="formSuccess"
-                style={{ overflow: "hidden" }}
-              >
-                ✦ Thank you. Your request has been received. One of our community
-                hosts will reach out on WhatsApp very soon to welcome you in.
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <FormPopup
+            isOpen={submitted || error !== null}
+            isSuccess={submitted}
+            message={
+              submitted
+                ? "✦ Thank you. Your request has been received. One of our community hosts will reach out on WhatsApp very soon to welcome you in."
+                : error || ""
+            }
+            onClose={() => {
+              setSubmitted(false);
+              setError(null);
+            }}
+          />
         </motion.form>
       </div>
     </motion.section>

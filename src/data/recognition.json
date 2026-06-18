@@ -1,0 +1,44 @@
+{
+  "buddyOfWeek": {
+    "name": "Leila Khoury",
+    "role": "Saheel, 62",
+    "avatar": "L",
+    "story": "Leila drove Margaret to three hospital appointments this week, sat with her through each one, and brought her homemade lentil soup afterwards. Quietly, without being asked twice.",
+    "attribution": "— nominated by Margaret & the founding hosts"
+  },
+  "buddyOfMonth": {
+    "title": "Star Buddy of the Month — Vote",
+    "description": "Four wonderful buddies have been nominated this month. Cast your vote — voting closes the last Sunday of the month.",
+    "note": "One vote per member. The Star Buddy receives a hand-written letter and her name on our Wall of Hearts.",
+    "nominees": [
+      {
+        "id": "aisha",
+        "initial": "A",
+        "name": "Aisha Rahman",
+        "reason": "for hosting weekly crochet circles",
+        "votes": 12
+      },
+      {
+        "id": "helen",
+        "initial": "H",
+        "name": "Helen Pereira",
+        "reason": "for tech help & weekly grocery runs",
+        "votes": 9
+      },
+      {
+        "id": "roya",
+        "initial": "R",
+        "name": "Roya Tehrani",
+        "reason": "for welcoming three new members",
+        "votes": 15
+      },
+      {
+        "id": "samira",
+        "initial": "S",
+        "name": "Samira Khan",
+        "reason": "for cooking-together sessions",
+        "votes": 7
+      }
+    ]
+  }
+}

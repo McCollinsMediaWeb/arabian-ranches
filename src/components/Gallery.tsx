@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface GalleryItem {
@@ -129,62 +129,21 @@ const decoSVGs: Record<string, React.ReactNode> = {
 };
 
 export function Gallery() {
-  const galleryItems: GalleryItem[] = [
-    {
-      month: "April 2026",
-      title: "Spring Mezze Afternoon",
-      meta: "18 ladies · Hosted by Samira",
-      photos: "24 photos",
-      g1: "#b8533a",
-      g2: "#d9a48a",
-      deco: "mezze",
-    },
-    {
-      month: "April 2026",
-      title: "First Crochet Circle",
-      meta: "12 ladies · Hosted by Aisha",
-      photos: "16 photos",
-      g1: "#8f3d29",
-      g2: "#c79a4b",
-      deco: "yarn",
-    },
-    {
-      month: "March 2026",
-      title: "Rose Garden Walk",
-      meta: "22 ladies · At Roya's home",
-      photos: "31 photos",
-      g1: "#6b6b3a",
-      g2: "#c79a4b",
-      deco: "leaves",
-    },
-    {
-      month: "March 2026",
-      title: "Watercolour Sunday",
-      meta: "14 ladies · Community Centre",
-      photos: "19 photos",
-      g1: "#d9a48a",
-      g2: "#b8533a",
-      deco: "flower",
-    },
-    {
-      month: "February 2026",
-      title: "Persian Tea & Poetry",
-      meta: "20 ladies · Alvorada Clubhouse",
-      photos: "27 photos",
-      g1: "#8f3d29",
-      g2: "#b8533a",
-      deco: "leaves",
-    },
-    {
-      month: "February 2026",
-      title: "Knit-Along — Winter Shawls",
-      meta: "11 ladies · Hattan",
-      photos: "14 photos",
-      g1: "#6b6b3a",
-      g2: "#8f3d29",
-      deco: "yarn",
-    },
-  ];
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/gallery")
+      .then((res) => res.json())
+      .then((data) => {
+        setGalleryItems(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load gallery:", err);
+        setLoading(false);
+      });
+  }, []);
 
   const containerVariants = {
     hidden: {},
@@ -195,7 +154,7 @@ export function Gallery() {
     },
   };
 
-    const textVariants = {
+  const textVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
@@ -215,6 +174,16 @@ export function Gallery() {
       transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as const },
     },
   };
+
+  if (loading) {
+    return (
+      <section className="gallery" id="gallery">
+        <div className="container" style={{ textAlign: "center", padding: "80px 0" }}>
+          <p style={{ color: "var(--cream)", opacity: 0.6 }}>Loading gallery...</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <motion.section
@@ -238,31 +207,37 @@ export function Gallery() {
           afternoons.
         </motion.p>
 
-        <motion.div className="gallery-grid" id="galleryGrid" variants={containerVariants}>
-          {galleryItems.map((item, idx) => (
-            <motion.div
-              className="gallery-card"
-              key={idx}
-              variants={cardVariants}
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as const }}
-            >
-              <div
-                className="bg"
-                style={{
-                  background: `linear-gradient(135deg, ${item.g1}, ${item.g2})`,
-                }}
-              ></div>
-              {decoSVGs[item.deco]}
-              <span className="gallery-photo-tag">{item.photos}</span>
-              <div className="gallery-overlay">
-                <span className="g-month">{item.month}</span>
-                <h4>{item.title}</h4>
-                <p>{item.meta}</p>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
+        {galleryItems.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <p style={{ color: "var(--cream)", opacity: 0.6 }}>No gallery items to show.</p>
+          </div>
+        ) : (
+          <motion.div className="gallery-grid" id="galleryGrid" variants={containerVariants}>
+            {galleryItems.map((item, idx) => (
+              <motion.div
+                className="gallery-card"
+                key={idx}
+                variants={cardVariants}
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as const }}
+              >
+                <div
+                  className="bg"
+                  style={{
+                    background: `linear-gradient(135deg, ${item.g1}, ${item.g2})`,
+                  }}
+                ></div>
+                {decoSVGs[item.deco]}
+                <span className="gallery-photo-tag">{item.photos}</span>
+                <div className="gallery-overlay">
+                  <span className="g-month">{item.month}</span>
+                  <h4>{item.title}</h4>
+                  <p>{item.meta}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </div>
     </motion.section>
   );

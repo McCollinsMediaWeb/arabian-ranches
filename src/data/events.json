@@ -1,0 +1,101 @@
+[
+  {
+    "month": "May",
+    "monthFull": "May",
+    "day": "07",
+    "title": "Welcome Tea — Founding Fifty",
+    "host": "Hosted by the founding hosts",
+    "location": "Mirador Clubhouse",
+    "time": "4:00 – 6:00 PM"
+  },
+  {
+    "month": "May",
+    "monthFull": "May",
+    "day": "14",
+    "title": "Levantine Mezze Afternoon",
+    "host": "Hosted by Samira",
+    "location": "Mirador Garden",
+    "time": "4:00 – 6:30 PM"
+  },
+  {
+    "month": "May",
+    "monthFull": "May",
+    "day": "21",
+    "title": "Watercolour Florals — Beginners Welcome",
+    "host": "Hosted by Priya",
+    "location": "Community Centre",
+    "time": "4:00 – 6:00 PM"
+  },
+  {
+    "month": "May",
+    "monthFull": "May",
+    "day": "28",
+    "title": "Garden Walk & Herb Cuttings Exchange",
+    "host": "Hosted by Margaret",
+    "location": "Saheel — Margaret's home",
+    "time": "8:30 – 10:30 AM"
+  },
+  {
+    "month": "Jun",
+    "monthFull": "June",
+    "day": "04",
+    "title": "Persian Tea & Poetry",
+    "host": "Hosted by Roya",
+    "location": "Alvorada Clubhouse",
+    "time": "4:30 – 6:30 PM"
+  },
+  {
+    "month": "Jun",
+    "monthFull": "June",
+    "day": "11",
+    "title": "Sourdough Workshop",
+    "host": "Hosted by Helen",
+    "location": "Hattan — Helen's kitchen",
+    "time": "10:00 AM – 12:30 PM"
+  },
+  {
+    "month": "Jun",
+    "monthFull": "June",
+    "day": "18",
+    "title": "Crochet Circle — Granny Squares",
+    "host": "Hosted by Aisha",
+    "location": "Saheel Community Room",
+    "time": "4:00 – 6:00 PM"
+  },
+  {
+    "month": "Jun",
+    "monthFull": "June",
+    "day": "25",
+    "title": "Memoir Writing — Our First Stories",
+    "host": "Hosted by Elaine",
+    "location": "Polo Café",
+    "time": "10:00 AM – 12:00 PM"
+  },
+  {
+    "month": "Jul",
+    "monthFull": "July",
+    "day": "02",
+    "title": "Indoor Plant Propagation",
+    "host": "Hosted by Anjali",
+    "location": "Terra Nova — Anjali's home",
+    "time": "4:30 – 6:30 PM"
+  },
+  {
+    "month": "Jul",
+    "monthFull": "July",
+    "day": "09",
+    "title": "Calligraphy & Cardmaking",
+    "host": "Hosted by Noor",
+    "location": "Community Centre",
+    "time": "4:00 – 6:00 PM"
+  },
+  {
+    "month": "Jul",
+    "monthFull": "July",
+    "day": "16",
+    "title": "Summer Gazpacho Cook-Along",
+    "host": "Hosted by Carmen",
+    "location": "Mirador — Carmen's kitchen",
+    "time": "5:00 – 7:00 PM"
+  }
+]
