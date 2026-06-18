@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
 interface RaindropTextProps {
   text: string;
@@ -11,7 +11,7 @@ interface RaindropTextProps {
 export function RaindropText({ text, className }: RaindropTextProps) {
   const words = text.split(" ");
 
-  const container = {
+  const container: Variants = {
     hidden: {},
     visible: {
       transition: {
@@ -20,13 +20,13 @@ export function RaindropText({ text, className }: RaindropTextProps) {
     },
   };
 
-  const child = {
+  const child: Variants = {
     hidden: { opacity: 0, y: -18 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
-        type: "spring" as const,
+        type: "spring",
         damping: 14,
         stiffness: 120,
       },
