@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FormPopup } from "./FormPopup";
+import { PhoneInput } from "./PhoneInput";
 
 export function Register() {
   const [submitted, setSubmitted] = useState(false);
@@ -192,13 +193,12 @@ export function Register() {
             </motion.div>
             <motion.div className="form-group" variants={itemVariants}>
               <label htmlFor="phone">WhatsApp number</label>
-              <input
-                type="tel"
+              <PhoneInput
                 id="phone"
                 required
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+971 50 000 0000"
+                onChange={setPhone}
+                theme="dark"
               />
             </motion.div>
             <motion.div className="form-group" variants={itemVariants}>

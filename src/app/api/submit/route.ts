@@ -255,6 +255,80 @@ Needs help with: ${needList && needList.length > 0 ? needList.join(", ") : "None
           </div>
         </div>
       `;
+    } else if (formType === "rsvp") {
+      const { name, phone, email, eventName, eventDate, eventTime, eventLocation } = body;
+
+      if (!name || !phone || !email || !eventName || !eventDate) {
+        return Response.json(
+          { success: false, message: "Missing required fields for RSVP." },
+          { status: 400 }
+        );
+      }
+
+      const welcomeMessage = `Hello ${name}, 😊 \n\nthank you for RSVPing to our gathering "${eventName}" on ${eventDate}! We have received your RSVP and look forward to seeing you. \n\nPlease let us know if you have any questions!`;
+      const whatsAppUrl = getWhatsAppLink(phone, welcomeMessage);
+
+      subject = `New RSVP for ${eventName}: ${name}`;
+      textContent = `
+New RSVP received for a gathering!
+
+Gathering: ${eventName}
+Date/Time: ${eventDate} at ${eventTime || "TBD"}
+Location: ${eventLocation || "TBD"}
+
+Attendee Details:
+Name: ${name}
+WhatsApp: ${phone} (Connect: ${whatsAppUrl})
+Email: ${email}
+      `.trim();
+
+      htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #c79a4b; border-radius: 8px; overflow: hidden; background-color: #faf8f5;">
+          <div style="background-color: #b8533a; padding: 24px; text-align: center; color: white;">
+            <h2 style="margin: 0; font-size: 24px; font-weight: normal; letter-spacing: 1px;">Gathering RSVP Received</h2>
+            <p style="margin: 4px 0 0 0; font-style: italic; opacity: 0.9;">~ what's happening ~</p>
+          </div>
+          <div style="padding: 24px; color: #333333; line-height: 1.6;">
+            <p style="margin-top: 0; font-size: 16px;">A new member has RSVP'd to a Wednesday gathering. Details below:</p>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-weight: bold; width: 35%;">Gathering</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-weight: bold; color: #b8533a;">${eventName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-weight: bold;">Date & Time</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea;">${eventDate} ${eventTime ? `(${eventTime})` : ""}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-weight: bold;">Location</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea;">${eventLocation || "TBD"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-weight: bold;">Attendee Name</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea;">${name}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-weight: bold;">WhatsApp</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea;"><a href="https://wa.me/${phone.replace(/[^0-9]/g, "")}" style="color: #c79a4b; text-decoration: none; font-weight: bold;">${phone}</a></td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-weight: bold;">Email</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #eaeaea;"><a href="mailto:${email}" style="color: #c79a4b; text-decoration: none;">${email}</a></td>
+              </tr>
+            </table>
+
+            <div style="margin-top: 32px; text-align: center;">
+              <a href="${whatsAppUrl}" target="_blank" style="display: inline-block; background-color: #25D366; color: white; padding: 14px 28px; font-weight: bold; text-decoration: none; border-radius: 6px; font-size: 16px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25); font-family: Arial, sans-serif;">
+                Connect on WhatsApp
+              </a>
+            </div>
+          </div>
+          <div style="background-color: #eaeaea; padding: 16px; text-align: center; font-size: 12px; color: #666666;">
+            This email was generated automatically from the Arabian Ranches Circle website.
+          </div>
+        </div>
+      `;
     } else {
       return Response.json(
         { success: false, message: "Invalid formType." },
@@ -262,11 +336,17 @@ Needs help with: ${needList && needList.length > 0 ? needList.join(", ") : "None
       );
     }
 
+    // Map event details to note for dashboard display
+    const submissionPayload = { ...body };
+    if (formType === "rsvp") {
+      submissionPayload.note = `${body.eventName} (${body.eventDate})`;
+    }
+
     // Save submission to local database
     await saveSubmission({
       id: Date.now().toString() + "-" + Math.random().toString(36).substring(2, 6),
       submittedAt: new Date().toISOString(),
-      ...body
+      ...submissionPayload
     });
 
     // SMTP Configuration

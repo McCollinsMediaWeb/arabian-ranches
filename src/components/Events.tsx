@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FormPopup } from "./FormPopup";
+import { PhoneInput } from "./PhoneInput";
 
 interface EventItem {
   month: string;
@@ -34,6 +36,19 @@ export function Events() {
   const [activeMonth, setActiveMonth] = useState("May");
   const [rsvps, setRsvps] = useState<string[]>([]);
 
+  // RSVP form states
+  const [isRsvpOpen, setIsRsvpOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [rsvpName, setRsvpName] = useState("");
+  const [rsvpPhone, setRsvpPhone] = useState("");
+  const [rsvpEmail, setRsvpEmail] = useState("");
+  const [rsvpSubmitLoading, setRsvpSubmitLoading] = useState(false);
+
+  // Success/Error popup states
+  const [showFormPopup, setShowFormPopup] = useState(false);
+  const [popupSuccess, setPopupSuccess] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
+
   useEffect(() => {
     fetch("/api/events")
       .then((res) => res.json())
@@ -54,11 +69,52 @@ export function Events() {
       });
   }, []);
 
-  const handleRsvpToggle = (title: string) => {
-    if (rsvps.includes(title)) {
-      setRsvps(rsvps.filter((t) => t !== title));
-    } else {
-      setRsvps([...rsvps, title]);
+  const handleRsvpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent) return;
+    setRsvpSubmitLoading(true);
+
+    try {
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          formType: "rsvp",
+          name: rsvpName,
+          phone: rsvpPhone,
+          email: rsvpEmail,
+          eventName: selectedEvent.title,
+          eventDate: `${selectedEvent.day} ${selectedEvent.month}`,
+          eventTime: selectedEvent.time,
+          eventLocation: selectedEvent.location
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit RSVP. Please try again.");
+      }
+
+      // Success
+      setRsvps([...rsvps, selectedEvent.title]);
+      setPopupSuccess(true);
+      setPopupMessage(`Thank you, ${rsvpName}! Your RSVP for "${selectedEvent.title}" has been registered.`);
+      setShowFormPopup(true);
+      setIsRsvpOpen(false);
+
+      // Reset fields
+      setRsvpName("");
+      setRsvpPhone("");
+      setRsvpEmail("");
+    } catch (err: any) {
+      setPopupSuccess(false);
+      setPopupMessage(err.message || "Failed to submit RSVP. Please try again.");
+      setShowFormPopup(true);
+    } finally {
+      setRsvpSubmitLoading(false);
     }
   };
 
@@ -187,7 +243,12 @@ export function Events() {
                     </div>
                     <motion.button
                       className={`rsvp-btn ${isConfirmed ? "confirmed" : ""}`}
-                      onClick={() => handleRsvpToggle(event.title)}
+                      onClick={() => {
+                        if (!isConfirmed) {
+                          setSelectedEvent(event);
+                          setIsRsvpOpen(true);
+                        }
+                      }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       layout
@@ -201,6 +262,192 @@ export function Events() {
           )}
         </motion.div>
       </div>
+
+      {/* RSVP Modal Overlay */}
+      <AnimatePresence>
+        {isRsvpOpen && selectedEvent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(10, 10, 10, 0.85)",
+              backdropFilter: "blur(10px)",
+              zIndex: 99998,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px"
+            }}
+            onClick={() => setIsRsvpOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 15, opacity: 0 }}
+              transition={{ type: "spring", damping: 30, stiffness: 400 }}
+              style={{
+                backgroundColor: "#1c1c1c",
+                border: "1px solid var(--gold, #c79a4b)",
+                borderRadius: "8px",
+                padding: "36px 32px",
+                maxWidth: "480px",
+                width: "100%",
+                boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
+                position: "relative",
+                textAlign: "left"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Icon */}
+              <div 
+                onClick={() => setIsRsvpOpen(false)}
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "20px",
+                  color: "rgba(246, 239, 228, 0.4)",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  transition: "color 0.2s",
+                  userSelect: "none"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = "rgba(246, 239, 228, 0.8)"}
+                onMouseLeave={(e) => e.currentTarget.style.color = "rgba(246, 239, 228, 0.4)"}
+              >
+                ✕
+              </div>
+
+              {/* Title */}
+              <h3 style={{
+                fontSize: "20px",
+                color: "var(--cream, #f6efe4)",
+                marginBottom: "8px",
+                fontWeight: "normal",
+                letterSpacing: "1px",
+              }}>
+                Gathering RSVP
+              </h3>
+              <p style={{
+                color: "var(--gold, #c79a4b)",
+                fontSize: "14px",
+                marginBottom: "24px",
+                lineHeight: "1.4"
+              }}>
+                {selectedEvent.title} — {selectedEvent.day} {monthLabels[selectedEvent.month] || selectedEvent.month}
+              </p>
+
+              <form onSubmit={handleRsvpSubmit}>
+                {/* Name */}
+                <div style={{ marginBottom: "16px" }}>
+                  <label htmlFor="rsvpName" style={{ display: "block", color: "rgba(246, 239, 228, 0.7)", fontSize: "13px", marginBottom: "6px" }}>
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    id="rsvpName"
+                    required
+                    value={rsvpName}
+                    onChange={(e) => setRsvpName(e.target.value)}
+                    placeholder="e.g. Layla Hassan"
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      backgroundColor: "#222",
+                      border: "1px solid #333",
+                      borderRadius: "4px",
+                      color: "var(--cream, #f6efe4)",
+                      fontSize: "14px",
+                      outline: "none",
+                      transition: "border-color 0.2s"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "var(--gold, #c79a4b)"}
+                    onBlur={(e) => e.target.style.borderColor = "#333"}
+                  />
+                </div>
+
+                {/* Phone */}
+                <div style={{ marginBottom: "16px" }}>
+                  <label htmlFor="rsvpPhone" style={{ display: "block", color: "rgba(246, 239, 228, 0.7)", fontSize: "13px", marginBottom: "6px" }}>
+                    WhatsApp Number
+                  </label>
+                  <PhoneInput
+                    id="rsvpPhone"
+                    required
+                    value={rsvpPhone}
+                    onChange={setRsvpPhone}
+                    theme="dark"
+                  />
+                </div>
+
+                {/* Email */}
+                <div style={{ marginBottom: "28px" }}>
+                  <label htmlFor="rsvpEmail" style={{ display: "block", color: "rgba(246, 239, 228, 0.7)", fontSize: "13px", marginBottom: "6px" }}>
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="rsvpEmail"
+                    required
+                    value={rsvpEmail}
+                    onChange={(e) => setRsvpEmail(e.target.value)}
+                    placeholder="hello@email.com"
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      backgroundColor: "#222",
+                      border: "1px solid #333",
+                      borderRadius: "4px",
+                      color: "var(--cream, #f6efe4)",
+                      fontSize: "14px",
+                      outline: "none",
+                      transition: "border-color 0.2s"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "var(--gold, #c79a4b)"}
+                    onBlur={(e) => e.target.style.borderColor = "#333"}
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <motion.button
+                  type="submit"
+                  disabled={rsvpSubmitLoading}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{
+                    width: "100%",
+                    backgroundColor: "var(--gold, #c79a4b)",
+                    color: "var(--ink, #121212)",
+                    border: "none",
+                    padding: "14px",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    fontSize: "14px",
+                    letterSpacing: "0.5px",
+                    opacity: rsvpSubmitLoading ? 0.7 : 1
+                  }}
+                >
+                  {rsvpSubmitLoading ? "Submitting..." : "Confirm RSVP"}
+                </motion.button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Form Submission Popup */}
+      <FormPopup
+        isOpen={showFormPopup}
+        isSuccess={popupSuccess}
+        message={popupMessage}
+        onClose={() => setShowFormPopup(false)}
+      />
     </motion.section>
   );
 }

@@ -1875,6 +1875,139 @@
       }
     }
 
+    /* ==========================================================================
+       intl-tel-input Custom Overrides
+       ========================================================================== */
+    .iti {
+      width: 100% !important;
+    }
+
+    /* Dark theme phone input */
+    .iti-phone-dark input {
+      width: 100% !important;
+      background: rgba(246, 239, 228, 0.05) !important;
+      border: 1px solid rgba(246, 239, 228, 0.2) !important;
+      color: var(--cream) !important;
+      padding-top: 14px !important;
+      padding-bottom: 14px !important;
+      padding-right: 16px !important;
+      font-family: var(--font-inter), sans-serif !important;
+      font-size: 15px !important;
+      border-radius: 4px !important;
+      transition: all 0.2s !important;
+    }
+    .iti-phone-dark input:focus {
+      outline: none !important;
+      border-color: var(--gold) !important;
+      background: rgba(246, 239, 228, 0.08) !important;
+    }
+
+    /* Light theme phone input (e.g. for light buddy card) */
+    .iti-phone-light input {
+      width: 100% !important;
+      background: var(--cream) !important;
+      border: 1px solid var(--line) !important;
+      color: var(--ink) !important;
+      padding-top: 12px !important;
+      padding-bottom: 12px !important;
+      padding-right: 14px !important;
+      font-family: var(--font-inter), sans-serif !important;
+      font-size: 14px !important;
+      border-radius: 4px !important;
+      transition: all 0.2s !important;
+    }
+    .iti-phone-light input:focus {
+      outline: none !important;
+      border-color: var(--terracotta) !important;
+      background: var(--cream) !important;
+    }
+
+    /* Dark Dropdown Menu */
+    .iti-phone-dark .iti__dropdown-content,
+    .iti-phone-dark .iti__country-list {
+      background-color: #1c1c1c !important;
+      border: 1px solid var(--gold, #c79a4b) !important;
+      color: var(--cream, #f6efe4) !important;
+      border-radius: 6px !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+      z-index: 999999 !important;
+    }
+    .iti-phone-dark .iti__country {
+      padding: 10px 14px !important;
+      outline: none !important;
+    }
+    .iti-phone-dark .iti__country:hover,
+    .iti-phone-dark .iti__country.iti__highlight {
+      background-color: rgba(199, 154, 75, 0.15) !important;
+      color: var(--gold, #c79a4b) !important;
+    }
+    .iti-phone-dark .iti__search-input {
+      background-color: #222 !important;
+      border: 1px solid #333 !important;
+      color: var(--cream, #f6efe4) !important;
+      border-radius: 4px !important;
+      padding: 8px 12px !important;
+      margin: 8px !important;
+      width: calc(100% - 16px) !important;
+      outline: none !important;
+    }
+    .iti-phone-dark .iti__search-input:focus {
+      border-color: var(--gold, #c79a4b) !important;
+    }
+    .iti-phone-dark .iti__country-name {
+      color: var(--cream, #f6efe4) !important;
+    }
+    .iti-phone-dark .iti__country:hover .iti__country-name,
+    .iti-phone-dark .iti__country.iti__highlight .iti__country-name {
+      color: var(--gold, #c79a4b) !important;
+    }
+    .iti-phone-dark .iti__dial-code {
+      color: rgba(246, 239, 228, 0.5) !important;
+    }
+
+    /* Light Dropdown Menu */
+    .iti-phone-light .iti__dropdown-content,
+    .iti-phone-light .iti__country-list {
+      background-color: var(--cream) !important;
+      border: 1px solid var(--line) !important;
+      color: var(--ink) !important;
+      border-radius: 6px !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+      z-index: 999999 !important;
+    }
+    .iti-phone-light .iti__country {
+      padding: 10px 14px !important;
+      outline: none !important;
+    }
+    .iti-phone-light .iti__country:hover,
+    .iti-phone-light .iti__country.iti__highlight {
+      background-color: rgba(184, 83, 58, 0.1) !important;
+      color: var(--terracotta) !important;
+    }
+    .iti-phone-light .iti__search-input {
+      background-color: #fff !important;
+      border: 1px solid var(--line) !important;
+      color: var(--ink) !important;
+      border-radius: 4px !important;
+      padding: 8px 12px !important;
+      margin: 8px !important;
+      width: calc(100% - 16px) !important;
+      outline: none !important;
+    }
+    .iti-phone-light .iti__search-input:focus {
+      border-color: var(--terracotta) !important;
+    }
+    .iti-phone-light .iti__country-name {
+      color: var(--ink) !important;
+    }
+    .iti-phone-light .iti__country:hover .iti__country-name,
+    .iti-phone-light .iti__country.iti__highlight .iti__country-name {
+      color: var(--terracotta) !important;
+    }
+    .iti-phone-light .iti__dial-code {
+      color: rgba(18, 18, 18, 0.5) !important;
+    }
+
 
 
   

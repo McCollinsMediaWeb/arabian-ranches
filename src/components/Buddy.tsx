@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FormPopup } from "./FormPopup";
+import { PhoneInput } from "./PhoneInput";
 
 export function Buddy() {
   const [becomeBuddySubmitted, setBecomeBuddySubmitted] = useState(false);
@@ -243,12 +244,11 @@ export function Buddy() {
               </motion.div>
               <motion.div className="b-group" variants={itemVariants}>
                 <label>WhatsApp number</label>
-                <input
-                  type="tel"
+                <PhoneInput
                   required
                   value={bPhone}
-                  onChange={(e) => setBPhone(e.target.value)}
-                  placeholder="+971 50 000 0000"
+                  onChange={setBPhone}
+                  theme="light"
                 />
               </motion.div>
               <motion.div className="b-group" variants={itemVariants}>
@@ -343,12 +343,11 @@ export function Buddy() {
               </motion.div>
               <motion.div className="b-group" variants={itemVariants}>
                 <label>WhatsApp number</label>
-                <input
-                  type="tel"
+                <PhoneInput
                   required
                   value={rPhone}
-                  onChange={(e) => setRPhone(e.target.value)}
-                  placeholder="+971 50 000 0000"
+                  onChange={setRPhone}
+                  theme="dark"
                 />
               </motion.div>
               <motion.div className="b-group" variants={itemVariants}>

@@ -510,6 +510,7 @@ export default function AdminDashboard() {
                   {submissions.map((sub) => {
                     const isRegister = sub.formType === "register";
                     const isVolunteer = sub.formType === "become-buddy";
+                    const isRsvp = sub.formType === "rsvp";
                     
                     // Format WhatsApp link message
                     let customMsg = "";
@@ -517,6 +518,8 @@ export default function AdminDashboard() {
                       customMsg = `Hello ${sub.name}, 😊 \n\nthank you for your request to join the Arabian Ranches Circle! We have received your details and are excited to welcome you. \n\nOne of our community hosts will share further details shortly. \n\nPlease let us know if you have any questions!`;
                     } else if (isVolunteer) {
                       customMsg = `Hello ${sub.name}, thank you so much for volunteering as a Buddy! We'll match you shortly.`;
+                    } else if (isRsvp) {
+                      customMsg = `Hello ${sub.name}, 😊 \n\nthank you for RSVPing to our gathering "${sub.note}"! We have received your RSVP and look forward to seeing you. \n\nPlease let us know if you have any questions!`;
                     } else {
                       customMsg = `Hello ${sub.name}, we received your request for a Buddy matching. We are reviewing options.`;
                     }
@@ -535,7 +538,7 @@ export default function AdminDashboard() {
                         key={sub.id} 
                         style={{
                           backgroundColor: "#1c1c1c",
-                          border: isRegister ? "1px solid rgba(199, 154, 75, 0.4)" : "1px solid #333",
+                          border: isRegister ? "1px solid rgba(199, 154, 75, 0.4)" : isRsvp ? "1px solid rgba(59, 130, 246, 0.4)" : "1px solid #333",
                           borderRadius: "8px",
                           padding: "24px",
                           boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
@@ -545,16 +548,16 @@ export default function AdminDashboard() {
                           <div>
                             <span style={{
                               fontSize: "12px",
-                              backgroundColor: isRegister ? "rgba(199, 154, 75, 0.15)" : isVolunteer ? "rgba(37, 211, 102, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                              color: isRegister ? "var(--gold, #c79a4b)" : isVolunteer ? "#4ade80" : "#fca5a5",
-                              border: `1px solid ${isRegister ? "var(--gold, #c79a4b)" : isVolunteer ? "#22c55e" : "#ef4444"}`,
+                              backgroundColor: isRegister ? "rgba(199, 154, 75, 0.15)" : isVolunteer ? "rgba(37, 211, 102, 0.1)" : isRsvp ? "rgba(59, 130, 246, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                              color: isRegister ? "var(--gold, #c79a4b)" : isVolunteer ? "#4ade80" : isRsvp ? "#60a5fa" : "#fca5a5",
+                              border: `1px solid ${isRegister ? "var(--gold, #c79a4b)" : isVolunteer ? "#22c55e" : isRsvp ? "#3b82f6" : "#ef4444"}`,
                               padding: "4px 8px",
                               borderRadius: "4px",
                               textTransform: "uppercase",
                               fontWeight: "bold",
                               letterSpacing: "0.5px"
                             }}>
-                              {sub.formType === "register" ? "Seat Request" : sub.formType === "become-buddy" ? "Buddy Volunteer" : "Buddy Request"}
+                              {sub.formType === "register" ? "Seat Request" : sub.formType === "become-buddy" ? "Buddy Volunteer" : sub.formType === "rsvp" ? "Gathering RSVP" : "Buddy Request"}
                             </span>
                             <h3 style={{ fontSize: "18px", margin: "12px 0 4px 0", fontWeight: "normal", color: "white" }}>{sub.name}</h3>
                             <span style={{ fontSize: "13px", color: "rgba(246, 239, 228, 0.4)" }}>Submitted on {formatTime(sub.submittedAt)}</span>
