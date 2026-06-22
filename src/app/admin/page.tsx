@@ -140,6 +140,15 @@ export default function AdminDashboard() {
     setPasswordInput("");
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleAddSnapshot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedFiles.length === 0) {
@@ -151,27 +160,10 @@ export default function AdminDashboard() {
     setUploading(true);
     try {
       for (const file of selectedFiles) {
-        // 1. Upload file
-        const formData = new FormData();
-        formData.append("file", file);
+        // 1. Convert file to Base64
+        const imageUrl = await fileToBase64(file);
 
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          headers: {
-            "x-admin-password": authToken || ""
-          },
-          body: formData
-        });
-
-        if (!uploadRes.ok) {
-          const errData = await uploadRes.json();
-          throw new Error(errData.message || `File upload failed for ${file.name}`);
-        }
-
-        const uploadData = await uploadRes.json();
-        const imageUrl = uploadData.url;
-
-        // 2. Add snapshot details to DB
+        // 2. Add snapshot details (with Base64 image data) to DB
         const res = await fetch("/api/snapshots", {
           method: "POST",
           headers: {
