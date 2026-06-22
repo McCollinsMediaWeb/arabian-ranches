@@ -8,7 +8,7 @@ export default function AdminDashboard() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [activeTab, setActiveTab] = useState<"submissions" | "calendar" | "gallery" | "recognition">("submissions");
+  const [activeTab, setActiveTab] = useState<"submissions" | "calendar" | "gallery" | "recognition" | "snapshots">("submissions");
   const [loading, setLoading] = useState(false);
 
   // Data states
@@ -16,6 +16,18 @@ export default function AdminDashboard() {
   const [events, setEvents] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
   const [recognition, setRecognition] = useState<any>(null);
+  const [snapshots, setSnapshots] = useState<any[]>([]);
+
+  // Forms states
+  const [snapshotForm, setSnapshotForm] = useState({
+    caption: "",
+    p1: "#b8533a",
+    p2: "#d9a48a",
+    rotation: 0,
+    marginTop: "0px"
+  });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   // Forms states
   const [eventForm, setEventForm] = useState({
@@ -85,19 +97,22 @@ export default function AdminDashboard() {
 
   const loadAllData = async (pass: string) => {
     try {
-      const [eventsRes, galleryRes, recRes] = await Promise.all([
+      const [eventsRes, galleryRes, recRes, snapshotsRes] = await Promise.all([
         fetch("/api/events"),
         fetch("/api/gallery"),
-        fetch("/api/recognition")
+        fetch("/api/recognition"),
+        fetch("/api/snapshots")
       ]);
 
       const eventsData = await eventsRes.json();
       const galleryData = await galleryRes.json();
       const recData = await recRes.json();
+      const snapshotsData = await snapshotsRes.json();
 
       setEvents(eventsData);
       setGallery(galleryData);
       setRecognition(recData);
+      setSnapshots(snapshotsData);
 
       if (recData?.buddyOfWeek) {
         setWeeklyForm({
@@ -123,6 +138,120 @@ export default function AdminDashboard() {
     setAuthToken(null);
     setIsAuthenticated(false);
     setPasswordInput("");
+  };
+
+  const handleAddSnapshot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile && !snapshotForm.caption) {
+      alert("Please choose a photo or write a caption.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let imageUrl = null;
+
+      // 1. Upload file if selected
+      if (selectedFile) {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          headers: {
+            "x-admin-password": authToken || ""
+          },
+          body: formData
+        });
+
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json();
+          throw new Error(errData.message || "File upload failed");
+        }
+
+        const uploadData = await uploadRes.json();
+        imageUrl = uploadData.url;
+        setUploading(false);
+      }
+
+      // 2. Add snapshot details to DB
+      const res = await fetch("/api/snapshots", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": authToken || ""
+        },
+        body: JSON.stringify({
+          imageUrl,
+          caption: snapshotForm.caption,
+          p1: snapshotForm.p1,
+          p2: snapshotForm.p2,
+          rotation: snapshotForm.rotation,
+          marginTop: snapshotForm.marginTop
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to add snapshot");
+      }
+
+      // Reset form and reload
+      setSnapshotForm({
+        caption: "",
+        p1: "#b8533a",
+        p2: "#d9a48a",
+        rotation: 0,
+        marginTop: "0px"
+      });
+      setSelectedFile(null);
+      
+      const fileInput = document.getElementById("snapshotFileInput") as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+
+      // Reload snapshots list
+      const snapshotsRes = await fetch("/api/snapshots");
+      const snapshotsData = await snapshotsRes.json();
+      setSnapshots(snapshotsData);
+
+      alert("Snapshot added successfully!");
+    } catch (err: any) {
+      alert(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteSnapshot = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this snapshot?")) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/snapshots?id=${id}`, {
+        method: "DELETE",
+        headers: {
+          "x-admin-password": authToken || ""
+        }
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to delete snapshot");
+      }
+
+      // Reload snapshots list
+      const snapshotsRes = await fetch("/api/snapshots");
+      const snapshotsData = await snapshotsRes.json();
+      setSnapshots(snapshotsData);
+
+      alert("Snapshot deleted successfully!");
+    } catch (err: any) {
+      alert(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Add Event handler
@@ -469,7 +598,8 @@ export default function AdminDashboard() {
             { id: "submissions", label: "Form Submissions" },
             { id: "calendar", label: "Manage Calendar" },
             { id: "gallery", label: "Manage Gallery" },
-            { id: "recognition", label: "Buddy Recognitions" }
+            { id: "recognition", label: "Buddy Recognitions" },
+            { id: "snapshots", label: "Gathering Snapshots" }
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -1152,6 +1282,167 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
+
+            </div>
+          )}
+
+          {/* 5. Snapshots Tab */}
+          {activeTab === "snapshots" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "40px", marginBottom: "40px" }}>
+              
+              {/* Add Snapshot Form */}
+              <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Add Gathering Snapshot</h3>
+                <form onSubmit={handleAddSnapshot}>
+                  
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Photo Image</label>
+                    <input
+                      id="snapshotFileInput"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setSelectedFile(e.target.files[0]);
+                        }
+                      }}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                    />
+                    <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>If empty, the polaroid will use default camera icon or SVG drawings.</span>
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Polaroid Caption</label>
+                    <textarea
+                      placeholder="e.g. Persian Tea&#10;& Poetry"
+                      value={snapshotForm.caption}
+                      onChange={(e) => setSnapshotForm({ ...snapshotForm, caption: e.target.value })}
+                      rows={3}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white", fontFamily: "inherit" }}
+                    />
+                    <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>Use Enter to start a new line on the card caption.</span>
+                  </div>
+
+                  {/* Polaroid Rotation and Margin Top */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Rotation Angle (deg)</label>
+                      <input
+                        type="number"
+                        min="-15"
+                        max="15"
+                        value={snapshotForm.rotation}
+                        onChange={(e) => setSnapshotForm({ ...snapshotForm, rotation: parseInt(e.target.value) || 0 })}
+                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Margin Top (px)</label>
+                      <select
+                        value={snapshotForm.marginTop}
+                        onChange={(e) => setSnapshotForm({ ...snapshotForm, marginTop: e.target.value })}
+                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      >
+                        <option value="0px">0px</option>
+                        <option value="10px">10px</option>
+                        <option value="20px">20px</option>
+                        <option value="30px">30px</option>
+                        <option value="40px">40px</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Border Color Pickers */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Gradient Start (p1)</label>
+                      <select
+                        value={snapshotForm.p1}
+                        onChange={(e) => setSnapshotForm({ ...snapshotForm, p1: e.target.value })}
+                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      >
+                        <option value="#b8533a">Terracotta (#b8533a)</option>
+                        <option value="#8f3d29">Deep Red (#8f3d29)</option>
+                        <option value="#6b6b3a">Olive Green (#6b6b3a)</option>
+                        <option value="#d9a48a">Peach (#d9a48a)</option>
+                        <option value="#c79a4b">Gold (#c79a4b)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Gradient End (p2)</label>
+                      <select
+                        value={snapshotForm.p2}
+                        onChange={(e) => setSnapshotForm({ ...snapshotForm, p2: e.target.value })}
+                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      >
+                        <option value="#d9a48a">Peach (#d9a48a)</option>
+                        <option value="#c79a4b">Gold (#c79a4b)</option>
+                        <option value="#b8533a">Terracotta (#b8533a)</option>
+                        <option value="#8f3d29">Deep Red (#8f3d29)</option>
+                        <option value="#6b6b3a">Olive Green (#6b6b3a)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={uploading}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      backgroundColor: "var(--gold, #c79a4b)",
+                      color: "#121212",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      fontSize: "14px"
+                    }}
+                  >
+                    {uploading ? "Uploading Image..." : "Create Snapshot"}
+                  </button>
+                </form>
+              </div>
+
+              {/* Manage Snapshots List */}
+              <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Current Snapshots ({snapshots.length})</h3>
+                {snapshots.length === 0 ? (
+                  <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No snapshots in database.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "600px", overflowY: "auto", paddingRight: "8px" }}>
+                    {snapshots.map((s) => (
+                      <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                          {s.imageUrl ? (
+                            <img src={s.imageUrl} alt="" style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "4px", border: "1px solid #444" }} />
+                          ) : (
+                            <div style={{ width: "50px", height: "50px", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#333", borderRadius: "4px", color: "rgba(246, 239, 228, 0.4)", fontSize: "10px" }}>SVG</div>
+                          )}
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "normal" }}>{s.caption.replace(/\n/g, " / ") || "(No caption)"}</h4>
+                            <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>Rot: {s.rotation}° · Margin: {s.marginTop}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteSnapshot(s.id)}
+                          style={{
+                            padding: "6px 12px",
+                            backgroundColor: "#8f3d29",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            fontSize: "12px"
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
             </div>
           )}

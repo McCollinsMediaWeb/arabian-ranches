@@ -273,6 +273,19 @@ export async function ensureInitialized() {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS snapshots (
+        id VARCHAR(50) PRIMARY KEY,
+        image_url TEXT,
+        caption TEXT,
+        p1 VARCHAR(10),
+        p2 VARCHAR(10),
+        rotation INTEGER,
+        margin_top VARCHAR(10),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // 2. Seed default data if empty
     const eventsCount = await client.query("SELECT COUNT(*) FROM events");
     if (parseInt(eventsCount.rows[0].count) === 0) {
@@ -300,6 +313,54 @@ export async function ensureInitialized() {
         "INSERT INTO recognition (key, data) VALUES ($1, $2) ON CONFLICT DO NOTHING",
         ["buddy_data", JSON.stringify(INITIAL_RECOGNITION)]
       );
+    }
+
+    const snapshotsCount = await client.query("SELECT COUNT(*) FROM snapshots");
+    if (parseInt(snapshotsCount.rows[0].count) === 0) {
+      const INITIAL_SNAPSHOTS = [
+        {
+          id: "seed-1",
+          image_url: null,
+          caption: "Persian Tea\n& Poetry",
+          p1: "#b8533a",
+          p2: "#d9a48a",
+          rotation: -4,
+          margin_top: "30px"
+        },
+        {
+          id: "seed-2",
+          image_url: null,
+          caption: "Crochet\nCircle",
+          p1: "#8f3d29",
+          p2: "#c79a4b",
+          rotation: 2,
+          margin_top: "0px"
+        },
+        {
+          id: "seed-3",
+          image_url: null,
+          caption: "Garden Walk\n& Cuttings",
+          p1: "#6b6b3a",
+          p2: "#c79a4b",
+          rotation: -2,
+          margin_top: "40px"
+        },
+        {
+          id: "seed-4",
+          image_url: null,
+          caption: "Sourdough\nWednesdays",
+          p1: "#d9a48a",
+          p2: "#b8533a",
+          rotation: 5,
+          margin_top: "10px"
+        }
+      ];
+      for (const s of INITIAL_SNAPSHOTS) {
+        await client.query(
+          "INSERT INTO snapshots (id, image_url, caption, p1, p2, rotation, margin_top) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING",
+          [s.id, s.image_url, s.caption, s.p1, s.p2, s.rotation, s.margin_top]
+        );
+      }
     }
 
     isInitialized = true;
@@ -432,4 +493,42 @@ export async function saveSubmission(submission: any) {
       submission.note || null
     ]
   );
+}
+
+// Snapshots DB functions
+export async function getSnapshots() {
+  await ensureInitialized();
+  const res = await pool.query("SELECT * FROM snapshots ORDER BY created_at ASC");
+  return res.rows.map((row: any) => ({
+    id: row.id,
+    imageUrl: row.image_url,
+    caption: row.caption,
+    p1: row.p1,
+    p2: row.p2,
+    rotation: row.rotation,
+    marginTop: row.margin_top,
+    createdAt: row.created_at
+  }));
+}
+
+export async function addSnapshot(s: any) {
+  await ensureInitialized();
+  await pool.query(
+    `INSERT INTO snapshots (id, image_url, caption, p1, p2, rotation, margin_top)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      s.id || Date.now().toString(),
+      s.imageUrl || null,
+      s.caption || "",
+      s.p1 || "#b8533a",
+      s.p2 || "#d9a48a",
+      s.rotation || 0,
+      s.marginTop || "0px"
+    ]
+  );
+}
+
+export async function deleteSnapshot(id: string) {
+  await ensureInitialized();
+  await pool.query("DELETE FROM snapshots WHERE id = $1", [id]);
 }
