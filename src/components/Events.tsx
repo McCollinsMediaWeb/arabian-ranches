@@ -35,9 +35,12 @@ export function Events() {
   const [loading, setLoading] = useState(true);
   const [activeMonth, setActiveMonth] = useState("May");
   const [rsvps, setRsvps] = useState<string[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [myRsvps, setMyRsvps] = useState<Record<string, string>>({});
 
   // RSVP form states
   const [isRsvpOpen, setIsRsvpOpen] = useState(false);
+  const [rsvpConfirmOpen, setRsvpConfirmOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [rsvpName, setRsvpName] = useState("");
   const [rsvpPhone, setRsvpPhone] = useState("");
@@ -49,13 +52,38 @@ export function Events() {
   const [popupSuccess, setPopupSuccess] = useState(false);
   const [popupMessage, setPopupMessage] = useState("");
 
+  const fetchAuthAndRsvps = async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      const data = await res.json();
+      if (data.authenticated && data.user) {
+        setUser(data.user);
+        
+        // Fetch user RSVPs
+        const rsvpRes = await fetch("/api/rsvps/my");
+        if (rsvpRes.ok) {
+          const rsvpData = await rsvpRes.json();
+          const rsvpMap: Record<string, string> = {};
+          rsvpData.forEach((r: any) => {
+            rsvpMap[r.event_title] = r.status;
+          });
+          setMyRsvps(rsvpMap);
+        }
+      } else {
+        setUser(null);
+        setMyRsvps({});
+      }
+    } catch (err) {
+      console.error("Failed to load user auth or RSVPs:", err);
+    }
+  };
+
   useEffect(() => {
     fetch("/api/events")
       .then((res) => res.json())
       .then((data) => {
         setEvents(data);
         if (data.length > 0) {
-          // If the default activeMonth has no events, set it to the first month with events
           const uniqueMonths = Array.from(new Set(data.map((e: any) => e.month))) as string[];
           if (uniqueMonths.length > 0 && !uniqueMonths.includes("May")) {
             setActiveMonth(uniqueMonths[0]);
@@ -67,6 +95,12 @@ export function Events() {
         console.error("Failed to load events:", err);
         setLoading(false);
       });
+
+    fetchAuthAndRsvps();
+    window.addEventListener("auth-state-change", fetchAuthAndRsvps);
+    return () => {
+      window.removeEventListener("auth-state-change", fetchAuthAndRsvps);
+    };
   }, []);
 
   const handleRsvpSubmit = async (e: React.FormEvent) => {
@@ -112,6 +146,43 @@ export function Events() {
     } catch (err: any) {
       setPopupSuccess(false);
       setPopupMessage(err.message || "Failed to submit RSVP. Please try again.");
+      setShowFormPopup(true);
+    } finally {
+      setRsvpSubmitLoading(false);
+    }
+  };
+
+  const handleRsvpRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent) return;
+    setRsvpSubmitLoading(true);
+
+    try {
+      const response = await fetch("/api/rsvps/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          eventTitle: selectedEvent.title,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit seat request. Please try again.");
+      }
+
+      // Success
+      setMyRsvps(prev => ({ ...prev, [selectedEvent.title]: 'pending' }));
+      setPopupSuccess(true);
+      setPopupMessage(`Your seat request for "${selectedEvent.title}" has been submitted successfully! The administrator will review your request shortly.`);
+      setShowFormPopup(true);
+      setRsvpConfirmOpen(false);
+    } catch (err: any) {
+      setPopupSuccess(false);
+      setPopupMessage(err.message || "Failed to submit seat request. Please try again.");
       setShowFormPopup(true);
     } finally {
       setRsvpSubmitLoading(false);
@@ -218,7 +289,50 @@ export function Events() {
           ) : (
             <AnimatePresence mode="popLayout">
               {filteredEvents.map((event) => {
-                const isConfirmed = rsvps.includes(event.title);
+                const userRsvpStatus = user ? myRsvps[event.title] : null;
+                const isConfirmed = rsvps.includes(event.title) || userRsvpStatus === "approved";
+                
+                let btnLabel = "RSVP";
+                let btnClass = "rsvp-btn";
+                let isDisabled = false;
+                let customStyle = {};
+
+                if (user) {
+                  if (userRsvpStatus === "approved") {
+                    btnLabel = "✓ Seat Approved";
+                    btnClass = "rsvp-btn confirmed";
+                    isDisabled = true;
+                    customStyle = { cursor: "default", pointerEvents: "none" };
+                  } else if (userRsvpStatus === "pending") {
+                    btnLabel = "✓ Requested";
+                    btnClass = "rsvp-btn pending";
+                    isDisabled = true;
+                    customStyle = {
+                      backgroundColor: "rgba(199, 154, 75, 0.15)",
+                      border: "1px solid var(--gold, #c79a4b)",
+                      color: "var(--gold, #c79a4b)",
+                      cursor: "default",
+                      pointerEvents: "none"
+                    };
+                  } else if (userRsvpStatus === "declined") {
+                    btnLabel = "Declined";
+                    btnClass = "rsvp-btn declined";
+                    isDisabled = true;
+                    customStyle = {
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(246, 239, 228, 0.15)",
+                      color: "rgba(246, 239, 228, 0.3)",
+                      cursor: "default",
+                      pointerEvents: "none"
+                    };
+                  }
+                } else if (isConfirmed) {
+                  btnLabel = "✓ You're in";
+                  btnClass = "rsvp-btn confirmed";
+                  isDisabled = true;
+                  customStyle = { cursor: "default", pointerEvents: "none" };
+                }
+
                 return (
                   <motion.div
                     className="event-item"
@@ -242,18 +356,22 @@ export function Events() {
                       </div>
                     </div>
                     <motion.button
-                      className={`rsvp-btn ${isConfirmed ? "confirmed" : ""}`}
+                      className={btnClass}
+                      disabled={isDisabled}
                       onClick={() => {
-                        if (!isConfirmed) {
-                          setSelectedEvent(event);
-                          setIsRsvpOpen(true);
+                        if (!user) {
+                          window.dispatchEvent(new Event("open-login-modal"));
+                          return;
                         }
+                        setSelectedEvent(event);
+                        setRsvpConfirmOpen(true);
                       }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={isDisabled ? {} : { scale: 1.05 }}
+                      whileTap={isDisabled ? {} : { scale: 0.95 }}
+                      style={customStyle}
                       layout
                     >
-                      {isConfirmed ? "✓ You're in" : "RSVP"}
+                      {btnLabel}
                     </motion.button>
                   </motion.div>
                 );
@@ -435,6 +553,139 @@ export function Events() {
                 >
                   {rsvpSubmitLoading ? "Submitting..." : "Confirm RSVP"}
                 </motion.button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* RSVP Confirmation Modal for Logged In Users */}
+      <AnimatePresence>
+        {rsvpConfirmOpen && selectedEvent && user && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(10, 10, 10, 0.85)",
+              backdropFilter: "blur(10px)",
+              zIndex: 99998,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px"
+            }}
+            onClick={() => setRsvpConfirmOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 15, opacity: 0 }}
+              transition={{ type: "spring", damping: 30, stiffness: 400 }}
+              style={{
+                backgroundColor: "#1c1c1c",
+                border: "1px solid var(--gold, #c79a4b)",
+                borderRadius: "8px",
+                padding: "36px 32px",
+                maxWidth: "480px",
+                width: "100%",
+                boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
+                position: "relative",
+                textAlign: "left"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Icon */}
+              <div 
+                onClick={() => setRsvpConfirmOpen(false)}
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "20px",
+                  color: "rgba(246, 239, 228, 0.4)",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  transition: "color 0.2s",
+                  userSelect: "none"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = "rgba(246, 239, 228, 0.8)"}
+                onMouseLeave={(e) => e.currentTarget.style.color = "rgba(246, 239, 228, 0.4)"}
+              >
+                ✕
+              </div>
+
+              {/* Title */}
+              <h3 style={{
+                fontSize: "20px",
+                color: "var(--cream, #f6efe4)",
+                marginBottom: "8px",
+                fontWeight: "normal",
+                letterSpacing: "1px",
+              }}>
+                Request Event Seat
+              </h3>
+              <p style={{
+                color: "var(--gold, #c79a4b)",
+                fontSize: "14px",
+                marginBottom: "24px",
+                lineHeight: "1.4"
+              }}>
+                {selectedEvent.title} — {selectedEvent.day} {monthLabels[selectedEvent.month] || selectedEvent.month}
+              </p>
+
+              <div style={{ color: "var(--cream)", fontSize: "14px", lineHeight: "1.6", marginBottom: "30px" }}>
+                <p>Hi <strong>{user.name}</strong>,</p>
+                <p style={{ marginTop: "10px" }}>Would you like to request a seat for this community gathering?</p>
+                <p style={{ marginTop: "10px", color: "rgba(246, 239, 228, 0.5)", fontSize: "13px" }}>
+                  An email notification will be sent to <strong>{user.email}</strong> once the administrator reviews and approves your request.
+                </p>
+              </div>
+
+              <form onSubmit={handleRsvpRequestSubmit}>
+                {/* Submit Button */}
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <motion.button
+                    type="submit"
+                    disabled={rsvpSubmitLoading}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    style={{
+                      flex: 1,
+                      backgroundColor: "var(--gold, #c79a4b)",
+                      color: "var(--ink, #121212)",
+                      border: "none",
+                      padding: "14px",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      fontSize: "14px",
+                      letterSpacing: "0.5px",
+                      opacity: rsvpSubmitLoading ? 0.7 : 1
+                    }}
+                  >
+                    {rsvpSubmitLoading ? "Submitting..." : "Request Seat"}
+                  </motion.button>
+                  <button
+                    type="button"
+                    onClick={() => setRsvpConfirmOpen(false)}
+                    style={{
+                      padding: "14px 20px",
+                      backgroundColor: "#333",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "14px"
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             </motion.div>
           </motion.div>

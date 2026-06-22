@@ -300,6 +300,35 @@ export async function ensureInitialized() {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(100) PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        name VARCHAR(255),
+        picture TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id VARCHAR(100) PRIMARY KEY,
+        user_id VARCHAR(100) REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TIMESTAMP NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rsvps (
+        id VARCHAR(50) PRIMARY KEY,
+        user_id VARCHAR(100) REFERENCES users(id) ON DELETE CASCADE,
+        event_title TEXT REFERENCES events(title) ON DELETE CASCADE,
+        status VARCHAR(20) DEFAULT 'pending',
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        approved_at TIMESTAMP
+      )
+    `);
+
     // 2. Seed default data if empty
     const eventsCount = await client.query("SELECT COUNT(*) FROM events");
     if (parseInt(eventsCount.rows[0].count) === 0) {
@@ -650,4 +679,108 @@ export async function addTeamMember(m: any) {
 export async function deleteTeamMember(id: string) {
   await ensureInitialized();
   await pool.query("DELETE FROM team WHERE id = $1", [id]);
+}
+
+// Users, Sessions, RSVPs DB functions
+export async function findOrCreateUser(sub: string, email: string, name: string, picture: string) {
+  await ensureInitialized();
+  await pool.query(
+    `INSERT INTO users (id, email, name, picture)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (id) DO UPDATE
+     SET email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture`,
+    [sub, email, name, picture]
+  );
+  return { id: sub, email, name, picture };
+}
+
+export async function createSession(userId: string, token: string, expiresAt: Date) {
+  await ensureInitialized();
+  await pool.query(
+    `INSERT INTO sessions (id, user_id, expires_at)
+     VALUES ($1, $2, $3)`,
+    [token, userId, expiresAt]
+  );
+}
+
+export async function getSessionUser(token: string) {
+  await ensureInitialized();
+  const res = await pool.query(
+    `SELECT u.* FROM sessions s
+     JOIN users u ON s.user_id = u.id
+     WHERE s.id = $1 AND s.expires_at > CURRENT_TIMESTAMP`,
+    [token]
+  );
+  if (res.rows.length === 0) return null;
+  return res.rows[0];
+}
+
+export async function deleteSession(token: string) {
+  await ensureInitialized();
+  await pool.query("DELETE FROM sessions WHERE id = $1", [token]);
+}
+
+export async function getUserRsvps(userId: string) {
+  await ensureInitialized();
+  const res = await pool.query(
+    "SELECT event_title, status FROM rsvps WHERE user_id = $1",
+    [userId]
+  );
+  return res.rows;
+}
+
+export async function createRsvp(id: string, userId: string, eventTitle: string) {
+  await ensureInitialized();
+  await pool.query(
+    `INSERT INTO rsvps (id, user_id, event_title, status)
+     VALUES ($1, $2, $3, 'pending')`,
+    [id, userId, eventTitle]
+  );
+}
+
+export async function getAllRsvps() {
+  await ensureInitialized();
+  const res = await pool.query(
+    `SELECT r.id, r.event_title, r.status, r.submitted_at, r.approved_at,
+            u.name as user_name, u.email as user_email, u.picture as user_picture
+     FROM rsvps r
+     JOIN users u ON r.user_id = u.id
+     ORDER BY r.submitted_at DESC`
+  );
+  return res.rows.map((row: any) => ({
+    id: row.id,
+    eventTitle: row.event_title,
+    status: row.status,
+    submittedAt: row.submitted_at,
+    approvedAt: row.approved_at,
+    userName: row.user_name,
+    userEmail: row.user_email,
+    userPicture: row.user_picture
+  }));
+}
+
+export async function updateRsvpStatus(id: string, status: string) {
+  await ensureInitialized();
+  
+  // Update status
+  const queryText = status === "approved" 
+    ? "UPDATE rsvps SET status = $1, approved_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *"
+    : "UPDATE rsvps SET status = $1, approved_at = NULL WHERE id = $2 RETURNING *";
+    
+  const rsvpRes = await pool.query(queryText, [status, id]);
+  if (rsvpRes.rows.length === 0) return null;
+  
+  const rsvp = rsvpRes.rows[0];
+  
+  // Get user details
+  const userRes = await pool.query("SELECT name, email FROM users WHERE id = $1", [rsvp.user_id]);
+  const user = userRes.rows[0];
+  
+  return {
+    id: rsvp.id,
+    eventTitle: rsvp.event_title,
+    status: rsvp.status,
+    userName: user.name,
+    userEmail: user.email
+  };
 }

@@ -8,7 +8,7 @@ export default function AdminDashboard() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [activeTab, setActiveTab] = useState<"submissions" | "calendar" | "gallery" | "recognition" | "snapshots" | "team">("submissions");
+  const [activeTab, setActiveTab] = useState<"submissions" | "calendar" | "gallery" | "recognition" | "snapshots" | "team" | "rsvps">("submissions");
   const [loading, setLoading] = useState(false);
 
   // Data states
@@ -31,6 +31,7 @@ export default function AdminDashboard() {
 
   // Team states
   const [team, setTeam] = useState<any[]>([]);
+  const [adminRsvps, setAdminRsvps] = useState<any[]>([]);
   const [teamForm, setTeamForm] = useState({
     id: "",
     name: "",
@@ -110,12 +111,13 @@ export default function AdminDashboard() {
 
   const loadAllData = async (pass: string) => {
     try {
-      const [eventsRes, galleryRes, recRes, snapshotsRes, teamRes] = await Promise.all([
+      const [eventsRes, galleryRes, recRes, snapshotsRes, teamRes, rsvpsRes] = await Promise.all([
         fetch("/api/events"),
         fetch("/api/gallery"),
         fetch("/api/recognition"),
         fetch("/api/snapshots"),
-        fetch("/api/team")
+        fetch("/api/team"),
+        fetch("/api/admin/rsvps", { headers: { "x-admin-password": pass } })
       ]);
 
       const eventsData = await eventsRes.json();
@@ -123,12 +125,14 @@ export default function AdminDashboard() {
       const recData = await recRes.json();
       const snapshotsData = await snapshotsRes.json();
       const teamData = await teamRes.json();
+      const rsvpsData = await rsvpsRes.json();
 
       setEvents(eventsData);
       setGallery(galleryData);
       setRecognition(recData);
       setSnapshots(snapshotsData);
       setTeam(teamData);
+      setAdminRsvps(rsvpsData);
 
       if (recData?.buddyOfWeek) {
         setWeeklyForm({
@@ -344,6 +348,38 @@ export default function AdminDashboard() {
       setTeam(teamData);
 
       alert("Team member deleted successfully!");
+    } catch (err: any) {
+      alert(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRsvpAction = async (rsvpId: string, action: "approve" | "decline") => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/rsvps", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": authToken || ""
+        },
+        body: JSON.stringify({ rsvpId, action })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || `Failed to ${action} request`);
+      }
+
+      // Reload RSVPs list
+      const rsvpsRes = await fetch("/api/admin/rsvps", {
+        headers: { "x-admin-password": authToken || "" }
+      });
+      const rsvpsData = await rsvpsRes.json();
+      setAdminRsvps(rsvpsData);
+
+      alert(`Request has been successfully ${action === "approve" ? "approved" : "declined"}.`);
     } catch (err: any) {
       alert(err.message || "An error occurred");
     } finally {
@@ -697,7 +733,8 @@ export default function AdminDashboard() {
             { id: "gallery", label: "Manage Gallery" },
             { id: "recognition", label: "Buddy Recognitions" },
             { id: "snapshots", label: "Gathering Snapshots" },
-            { id: "team", label: "Meet Our Team" }
+            { id: "team", label: "Meet Our Team" },
+            { id: "rsvps", label: "Gatherings RSVPs" }
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -1704,6 +1741,94 @@ export default function AdminDashboard() {
                 )}
               </div>
 
+            </div>
+          )}
+
+          {/* 7. RSVPs Tab */}
+          {activeTab === "rsvps" && (
+            <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333", marginBottom: "40px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Gatherings Seat Requests & RSVPs ({adminRsvps.length})</h3>
+              
+              {adminRsvps.length === 0 ? (
+                <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No seat requests submitted yet.</p>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "14px" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #333", color: "rgba(246, 239, 228, 0.6)" }}>
+                        <th style={{ padding: "12px 16px" }}>Member</th>
+                        <th style={{ padding: "12px 16px" }}>Event</th>
+                        <th style={{ padding: "12px 16px" }}>Submitted At</th>
+                        <th style={{ padding: "12px 16px" }}>Status</th>
+                        <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminRsvps.map((r) => {
+                        let statusColor = "rgba(246, 239, 228, 0.6)";
+                        if (r.status === "approved") statusColor = "#c79a4b";
+                        if (r.status === "declined") statusColor = "#8f3d29";
+
+                        return (
+                          <tr key={r.id} style={{ borderBottom: "1px solid #222" }}>
+                            <td style={{ padding: "16px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <img src={r.userPicture} alt="" style={{ width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #444" }} />
+                                <div>
+                                  <div style={{ fontWeight: "500", color: "var(--cream)" }}>{r.userName}</div>
+                                  <div style={{ fontSize: "12px", color: "rgba(246, 239, 228, 0.4)" }}>{r.userEmail}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: "16px", color: "var(--cream)", fontWeight: "500" }}>{r.eventTitle}</td>
+                            <td style={{ padding: "16px", color: "rgba(246, 239, 228, 0.6)" }}>{new Date(r.submittedAt).toLocaleDateString()}</td>
+                            <td style={{ padding: "16px", color: statusColor, textTransform: "capitalize", fontWeight: "bold" }}>{r.status}</td>
+                            <td style={{ padding: "16px", textAlign: "right" }}>
+                              {r.status === "pending" ? (
+                                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                                  <button
+                                    onClick={() => handleRsvpAction(r.id, "approve")}
+                                    style={{
+                                      padding: "6px 12px",
+                                      backgroundColor: "var(--gold, #c79a4b)",
+                                      color: "#121212",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      cursor: "pointer",
+                                      fontSize: "12px",
+                                      fontWeight: "bold"
+                                    }}
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleRsvpAction(r.id, "decline")}
+                                    style={{
+                                      padding: "6px 12px",
+                                      backgroundColor: "#8f3d29",
+                                      color: "white",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      cursor: "pointer",
+                                      fontSize: "12px"
+                                    }}
+                                  >
+                                    Decline
+                                  </button>
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: "12px", color: "rgba(246, 239, 228, 0.4)" }}>
+                                  {r.status === "approved" ? "Approved" : "Declined"}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
