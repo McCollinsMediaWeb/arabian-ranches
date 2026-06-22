@@ -120,7 +120,7 @@
       color: var(--terracotta);
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 990px) {
       .nav-links {
         display: none;
       }
@@ -971,27 +971,35 @@
       scroll-behavior: smooth;
       padding: 24px 4px;
       scrollbar-width: none; /* Hide scrollbar for Firefox */
+      -webkit-overflow-scrolling: touch;
     }
 
     .team-slider::-webkit-scrollbar {
       display: none; /* Hide scrollbar for Chrome/Safari/Opera */
     }
 
+    .team-slider.snapping {
+      scroll-snap-type: x mandatory;
+    }
+
     /* Set widths so cards don't shrink inside slider */
     .team-slider .team-card {
       flex: 0 0 calc(33.333% - 19px); /* 3 cards visible on desktop */
       min-width: 280px;
+      scroll-snap-align: center;
     }
 
     @media (max-width: 900px) {
       .team-slider .team-card {
         flex: 0 0 calc(50% - 14px); /* 2 cards visible on tablet */
+        scroll-snap-align: center;
       }
     }
 
     @media (max-width: 600px) {
       .team-slider .team-card {
-        flex: 0 0 100%; /* 1 card visible on mobile */
+        flex: 0 0 calc(100% - 48px); /* 1 card visible on mobile with a peeking edge of the next card */
+        scroll-snap-align: center;
       }
     }
 
@@ -1038,6 +1046,13 @@
       }
       .slider-nav-btn.next {
         right: -12px;
+      }
+    }
+
+    /* Hide nav buttons entirely on touch devices with no hover capabilities */
+    @media (hover: none) {
+      .slider-nav-btn {
+        display: none !important;
       }
     }
 
@@ -1803,11 +1818,13 @@
       top: 67px;
       width: 100%;
       height: calc(100vh - 67px);
-      background: var(--cream);
+      background: rgba(246, 239, 228, 0.98);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
       z-index: 99;
       display: flex;
       flex-direction: column;
-      padding: 40px 24px;
+      padding: 40px 24px 20px 24px;
       border-top: 1px solid var(--line);
       box-shadow: 0 10px 30px rgba(43, 36, 25, 0.05);
       overflow-y: auto;
@@ -1837,9 +1854,37 @@
       color: var(--terracotta);
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 990px) {
+      nav {
+        padding: 12px 0;
+      }
+
       .mobile-menu-btn {
         display: flex;
+      }
+
+      .mobile-menu-overlay {
+        top: 59px;
+        height: calc(100vh - 59px);
+      }
+
+      .nav-menu-desktop {
+        display: none !important;
+      }
+
+      .hero {
+        padding: 80px 0 90px;
+      }
+
+      .hero h1 {
+        font-size: clamp(36px, 10vw, 54px);
+        margin-bottom: 20px;
+      }
+
+      .hero p.lead {
+        font-size: 16px;
+        margin-bottom: 28px;
+        line-height: 1.65;
       }
       
       /* Reset Polaroid offsets on wrapped screens */

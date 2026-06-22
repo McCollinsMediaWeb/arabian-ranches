@@ -291,28 +291,64 @@ export function Nav() {
                 {links.map((link, idx) => (
                   <motion.li
                     key={link.href}
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
+                    transition={{ delay: idx * 0.05, ease: "easeOut" }}
+                    style={{
+                      borderBottom: "1px dashed rgba(43, 36, 25, 0.08)",
+                      paddingBottom: "12px",
+                      listStyle: "none"
+                    }}
                   >
-                    <a href={link.href} onClick={() => setIsOpen(false)}>
-                      {link.label}
+                    <a 
+                      href={link.href} 
+                      onClick={() => setIsOpen(false)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "16px"
+                      }}
+                    >
+                      <span style={{ 
+                        fontFamily: "var(--font-caveat), cursive", 
+                        color: "var(--gold)", 
+                        fontSize: "20px" 
+                      }}>
+                        0{idx + 1}.
+                      </span>
+                      <span className="mobile-link-text">{link.label}</span>
                     </a>
                   </motion.li>
                 ))}
 
-                {/* Mobile Auth options */}
+                {/* Mobile Auth options card */}
                 <motion.li
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: links.length * 0.05 }}
-                  style={{ marginTop: "20px", listStyle: "none" }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: links.length * 0.05 + 0.1 }}
+                  style={{ listStyle: "none", marginTop: "24px" }}
                 >
                   {user ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <img src={user.picture} alt="" style={{ width: "32px", height: "32px", borderRadius: "50%" }} />
-                        <span style={{ color: "var(--cream)" }}>{user.name}</span>
+                    <div style={{
+                      backgroundColor: "rgba(43, 36, 25, 0.03)",
+                      border: "1px solid var(--line)",
+                      borderRadius: "6px",
+                      padding: "20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "12px"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <img 
+                          src={user.picture} 
+                          alt="" 
+                          style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--gold)" }} 
+                        />
+                        <div style={{ textAlign: "left" }}>
+                          <div style={{ fontWeight: "bold", color: "var(--ink)", fontSize: "15px" }}>{user.name}</div>
+                          <div style={{ fontSize: "11px", color: "var(--ink-soft)" }}>{user.email}</div>
+                        </div>
                       </div>
                       <button
                         onClick={() => {
@@ -320,39 +356,73 @@ export function Nav() {
                           setIsOpen(false);
                         }}
                         style={{
-                          padding: "8px",
+                          width: "100%",
+                          padding: "10px",
                           backgroundColor: "#8f3d29",
                           color: "white",
                           border: "none",
-                          borderRadius: "4px",
+                          borderRadius: "20px",
                           cursor: "pointer",
-                          width: "120px"
+                          fontSize: "13px",
+                          fontWeight: "500",
+                          transition: "background 0.2s"
                         }}
                       >
-                        Log Out
+                        Sign Out
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => {
-                        setIsLoginOpen(true);
-                        setIsOpen(false);
-                      }}
-                      style={{
-                        padding: "8px 20px",
-                        backgroundColor: "var(--gold)",
-                        color: "black",
-                        border: "none",
-                        borderRadius: "20px",
-                        cursor: "pointer",
-                        fontWeight: "bold"
-                      }}
-                    >
-                      Sign In
-                    </button>
+                    <div style={{
+                      backgroundColor: "rgba(199, 154, 75, 0.05)",
+                      border: "1px dashed var(--gold)",
+                      borderRadius: "6px",
+                      padding: "24px 20px",
+                      textAlign: "center"
+                    }}>
+                      <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: "var(--ink-soft)" }}>
+                        Join us to request seats and connect with neighbours!
+                      </p>
+                      <button
+                        onClick={() => {
+                          setIsLoginOpen(true);
+                          setIsOpen(false);
+                        }}
+                        style={{
+                          padding: "12px 28px",
+                          backgroundColor: "var(--terracotta)",
+                          color: "var(--cream)",
+                          border: "none",
+                          borderRadius: "20px",
+                          cursor: "pointer",
+                          fontWeight: "500",
+                          fontSize: "14px",
+                          width: "100%",
+                          boxShadow: "0 4px 15px rgba(184, 83, 58, 0.15)"
+                        }}
+                      >
+                        Sign In with Google
+                      </button>
+                    </div>
                   )}
                 </motion.li>
               </ul>
+
+              {/* Botanical watermark element at the bottom of mobile menu */}
+              <div style={{
+                marginTop: "auto",
+                paddingTop: "40px",
+                display: "flex",
+                justifyContent: "center",
+                opacity: 0.08,
+                pointerEvents: "none"
+              }}>
+                <svg width="80" height="80" viewBox="0 0 400 400" fill="none" stroke="var(--ink)">
+                  <path d="M200 186 Q190 170 200 160 Q210 170 200 186" fill="currentColor" strokeWidth="2" />
+                  <path d="M200 214 Q190 230 200 240 Q210 230 200 214" fill="currentColor" strokeWidth="2" />
+                  <path d="M186 200 Q170 190 160 200 Q170 210 186 200" fill="currentColor" strokeWidth="2" />
+                  <path d="M214 200 Q230 190 240 200 Q230 210 214 200" fill="currentColor" strokeWidth="2" />
+                </svg>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

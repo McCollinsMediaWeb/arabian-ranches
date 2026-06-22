@@ -297,7 +297,7 @@ export function Team() {
           </AnimatePresence>
 
           <motion.div
-            className="team-slider"
+            className={`team-slider ${isHovered ? "snapping" : ""}`}
             ref={sliderRef}
             variants={containerVariants}
           >
