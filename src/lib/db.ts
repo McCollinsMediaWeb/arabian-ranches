@@ -229,8 +229,13 @@ export async function ensureInitialized() {
         title TEXT PRIMARY KEY,
         host TEXT,
         location TEXT,
-        time TEXT
+        time TEXT,
+        bring_options JSONB DEFAULT '[]'::jsonb
       )
+    `);
+
+    await client.query(`
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS bring_options JSONB DEFAULT '[]'::jsonb
     `);
 
     await client.query(`
@@ -349,6 +354,7 @@ export async function ensureInitialized() {
         user_id VARCHAR(100) REFERENCES users(id) ON DELETE CASCADE,
         event_title TEXT REFERENCES events(title) ON DELETE CASCADE,
         whatsapp TEXT,
+        bring_items JSONB DEFAULT '[]'::jsonb,
         status VARCHAR(20) DEFAULT 'pending',
         submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         approved_at TIMESTAMP
@@ -357,6 +363,10 @@ export async function ensureInitialized() {
 
     await client.query(`
       ALTER TABLE rsvps ADD COLUMN IF NOT EXISTS whatsapp TEXT
+    `);
+
+    await client.query(`
+      ALTER TABLE rsvps ADD COLUMN IF NOT EXISTS bring_items JSONB DEFAULT '[]'::jsonb
     `);
 
     // 2. Seed default data if empty
@@ -511,7 +521,16 @@ export async function ensureInitialized() {
 export async function getEvents() {
   await ensureInitialized();
   const res = await pool.query("SELECT * FROM events");
-  return res.rows;
+  return res.rows.map((row: any) => ({
+    day: row.day,
+    month: row.month,
+    monthFull: row.month_full,
+    title: row.title,
+    host: row.host,
+    location: row.location,
+    time: row.time,
+    bringOptions: row.bring_options || []
+  }));
 }
 
 export async function saveEvents(events: any[]) {
@@ -519,12 +538,26 @@ export async function saveEvents(events: any[]) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query("DELETE FROM events");
     for (const e of events) {
       await client.query(
-        "INSERT INTO events (month, month_full, day, title, host, location, time) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-        [e.month, e.monthFull, e.day, e.title, e.host, e.location, e.time]
+        `INSERT INTO events (month, month_full, day, title, host, location, time, bring_options)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (title) DO UPDATE SET
+           month = EXCLUDED.month,
+           month_full = EXCLUDED.month_full,
+           day = EXCLUDED.day,
+           host = EXCLUDED.host,
+           location = EXCLUDED.location,
+           time = EXCLUDED.time,
+           bring_options = EXCLUDED.bring_options`,
+        [e.month, e.monthFull, e.day, e.title, e.host, e.location, e.time, JSON.stringify(e.bringOptions || [])]
       );
+    }
+    const titles = events.map((event) => event.title);
+    if (titles.length === 0) {
+      await client.query("DELETE FROM events");
+    } else {
+      await client.query("DELETE FROM events WHERE NOT (title = ANY($1::text[]))", [titles]);
     }
     await client.query("COMMIT");
   } catch (err) {
@@ -847,19 +880,19 @@ export async function getUserRsvps(userId: string) {
   return res.rows;
 }
 
-export async function createRsvp(id: string, userId: string, eventTitle: string, whatsapp: string) {
+export async function createRsvp(id: string, userId: string, eventTitle: string, whatsapp: string, bringItems: string[] = []) {
   await ensureInitialized();
   await pool.query(
-    `INSERT INTO rsvps (id, user_id, event_title, whatsapp, status)
-     VALUES ($1, $2, $3, $4, 'pending')`,
-    [id, userId, eventTitle, whatsapp]
+    `INSERT INTO rsvps (id, user_id, event_title, whatsapp, bring_items, status)
+     VALUES ($1, $2, $3, $4, $5, 'pending')`,
+    [id, userId, eventTitle, whatsapp, JSON.stringify(bringItems)]
   );
 }
 
 export async function getAllRsvps() {
   await ensureInitialized();
   const res = await pool.query(
-    `SELECT r.id, r.event_title, r.whatsapp, r.status, r.submitted_at, r.approved_at,
+    `SELECT r.id, r.event_title, r.whatsapp, r.bring_items, r.status, r.submitted_at, r.approved_at,
             u.name as user_name, u.email as user_email, u.picture as user_picture
      FROM rsvps r
      JOIN users u ON r.user_id = u.id
@@ -869,6 +902,7 @@ export async function getAllRsvps() {
     id: row.id,
     eventTitle: row.event_title,
     whatsapp: row.whatsapp,
+    bringItems: row.bring_items || [],
     status: row.status,
     submittedAt: row.submitted_at,
     approvedAt: row.approved_at,

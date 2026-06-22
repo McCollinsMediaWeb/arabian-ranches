@@ -65,7 +65,8 @@ export default function AdminDashboard() {
     title: "",
     host: "",
     location: "",
-    time: ""
+    time: "",
+    bringOptions: ""
   });
 
   const [galleryForm, setGalleryForm] = useState({
@@ -491,7 +492,10 @@ export default function AdminDashboard() {
           "Content-Type": "application/json",
           "x-admin-password": authToken
         },
-        body: JSON.stringify(eventForm)
+        body: JSON.stringify({
+          ...eventForm,
+          bringOptions: eventForm.bringOptions.split("\n").map((option) => option.trim()).filter(Boolean)
+        })
       });
 
       const data = await res.json();
@@ -509,7 +513,8 @@ export default function AdminDashboard() {
         title: "",
         host: "",
         location: "",
-        time: ""
+        time: "",
+        bringOptions: ""
       });
       // Refresh list
       const freshRes = await fetch("/api/events");
@@ -536,6 +541,34 @@ export default function AdminDashboard() {
       }
 
       // Refresh list
+      const freshRes = await fetch("/api/events");
+      setEvents(await freshRes.json());
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleUpdateBringOptions = async (event: any) => {
+    if (!authToken) return;
+    const value = prompt(
+      "Enter what guests can bring, separated by commas. Leave empty to remove the list.",
+      (event.bringOptions || []).join(", ")
+    );
+    if (value === null) return;
+
+    try {
+      const bringOptions = value.split(",").map((option) => option.trim()).filter(Boolean);
+      const res = await fetch("/api/events", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": authToken
+        },
+        body: JSON.stringify({ title: event.title, bringOptions })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update bring list");
+
       const freshRes = await fetch("/api/events");
       setEvents(await freshRes.json());
     } catch (err: any) {
@@ -1139,6 +1172,7 @@ export default function AdminDashboard() {
                           <th style={{ padding: "12px 16px" }}>Member</th>
                           <th style={{ padding: "12px 16px" }}>WhatsApp</th>
                           <th style={{ padding: "12px 16px" }}>Event</th>
+                          <th style={{ padding: "12px 16px" }}>Bringing</th>
                           <th style={{ padding: "12px 16px" }}>Submitted At</th>
                           <th style={{ padding: "12px 16px" }}>Status</th>
                           <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
@@ -1187,6 +1221,9 @@ export default function AdminDashboard() {
                                 )}
                               </td>
                               <td style={{ padding: "16px", color: "var(--cream)", fontWeight: "500" }}>{r.eventTitle}</td>
+                              <td style={{ padding: "16px", color: "rgba(246, 239, 228, 0.7)", fontSize: "12px" }}>
+                                {r.bringItems?.length ? r.bringItems.join(", ") : "—"}
+                              </td>
                               <td style={{ padding: "16px", color: "rgba(246, 239, 228, 0.6)" }}>{new Date(r.submittedAt).toLocaleDateString()}</td>
                               <td style={{ padding: "16px", color: statusColor, textTransform: "capitalize", fontWeight: "bold" }}>{r.status}</td>
                               <td style={{ padding: "16px", textAlign: "right" }}>
@@ -1643,6 +1680,22 @@ export default function AdminDashboard() {
                     />
                   </div>
 
+                  <div style={{ marginBottom: "24px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>
+                      What can guests bring? <span style={{ opacity: 0.6 }}>(Optional)</span>
+                    </label>
+                    <textarea
+                      rows={5}
+                      placeholder={"Enter one option per line, for example:\nMains & Mezze\nSides & Salads\nDesserts & Sweets\nDrinks"}
+                      value={eventForm.bringOptions}
+                      onChange={(e) => setEventForm({ ...eventForm, bringOptions: e.target.value })}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white", resize: "vertical", fontFamily: "inherit", lineHeight: "1.5" }}
+                    />
+                    <p style={{ margin: "7px 0 0", color: "rgba(246, 239, 228, 0.4)", fontSize: "11px" }}>
+                      Guests will select one or more of these options while requesting a seat.
+                    </p>
+                  </div>
+
                   <button
                     type="submit"
                     style={{
@@ -1683,21 +1736,35 @@ export default function AdminDashboard() {
                         <span style={{ fontSize: "11px", color: "var(--gold, #c79a4b)", textTransform: "uppercase" }}>{event.monthFull} {event.day}</span>
                         <h4 style={{ margin: "4px 0", fontSize: "16px", fontWeight: "normal" }}>{event.title}</h4>
                         <span style={{ fontSize: "13px", color: "rgba(246, 239, 228, 0.5)" }}>{event.host} · {event.location}</span>
+                        {event.bringOptions?.length > 0 && (
+                          <div style={{ marginTop: "8px", fontSize: "11px", color: "var(--gold, #c79a4b)" }}>
+                            Bring options: {event.bringOptions.join(" · ")}
+                          </div>
+                        )}
                       </div>
-                      <button
-                        onClick={() => handleDeleteEvent(event.title)}
-                        style={{
-                          backgroundColor: "transparent",
-                          border: "1px solid #ef4444",
-                          color: "#ef4444",
-                          padding: "6px 12px",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                          fontSize: "12px"
-                        }}
-                      >
-                        Delete
-                      </button>
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateBringOptions(event)}
+                          style={{ backgroundColor: "transparent", border: "1px solid var(--gold, #c79a4b)", color: "var(--gold, #c79a4b)", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}
+                        >
+                          Manage bring list
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(event.title)}
+                          style={{
+                            backgroundColor: "transparent",
+                            border: "1px solid #ef4444",
+                            color: "#ef4444",
+                            padding: "6px 12px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            fontSize: "12px"
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

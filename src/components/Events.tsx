@@ -13,6 +13,7 @@ interface EventItem {
   host: string;
   location: string;
   time: string;
+  bringOptions?: string[];
 }
 
 const monthLabels: Record<string, string> = {
@@ -45,6 +46,7 @@ export function Events() {
   const [rsvpName, setRsvpName] = useState("");
   const [rsvpPhone, setRsvpPhone] = useState("");
   const [rsvpEmail, setRsvpEmail] = useState("");
+  const [selectedBringItems, setSelectedBringItems] = useState<string[]>([]);
   const [rsvpSubmitLoading, setRsvpSubmitLoading] = useState(false);
 
   // Success/Error popup states
@@ -122,7 +124,8 @@ export function Events() {
           eventName: selectedEvent.title,
           eventDate: `${selectedEvent.day} ${selectedEvent.month}`,
           eventTime: selectedEvent.time,
-          eventLocation: selectedEvent.location
+          eventLocation: selectedEvent.location,
+          bringItems: selectedBringItems
         }),
       });
 
@@ -143,6 +146,7 @@ export function Events() {
       setRsvpName("");
       setRsvpPhone("");
       setRsvpEmail("");
+      setSelectedBringItems([]);
     } catch (err: any) {
       setPopupSuccess(false);
       setPopupMessage(err.message || "Failed to submit RSVP. Please try again.");
@@ -161,6 +165,12 @@ export function Events() {
       setShowFormPopup(true);
       return;
     }
+    if (selectedEvent.bringOptions?.length && selectedBringItems.length === 0) {
+      setPopupSuccess(false);
+      setPopupMessage("Please select what you can bring.");
+      setShowFormPopup(true);
+      return;
+    }
     setRsvpSubmitLoading(true);
 
     try {
@@ -172,6 +182,7 @@ export function Events() {
         body: JSON.stringify({
           eventTitle: selectedEvent.title,
           whatsapp: rsvpPhone,
+          bringItems: selectedBringItems,
         }),
       });
 
@@ -188,6 +199,7 @@ export function Events() {
       setShowFormPopup(true);
       setRsvpConfirmOpen(false);
       setRsvpPhone(""); // Reset phone
+      setSelectedBringItems([]);
     } catch (err: any) {
       setPopupSuccess(false);
       setPopupMessage(err.message || "Failed to submit seat request. Please try again.");
@@ -372,6 +384,7 @@ export function Events() {
                           return;
                         }
                         setSelectedEvent(event);
+                        setSelectedBringItems([]);
                         setRsvpConfirmOpen(true);
                       }}
                       whileHover={isDisabled ? {} : { scale: 1.05 }}
@@ -423,6 +436,8 @@ export function Events() {
                 borderRadius: "8px",
                 padding: "36px 32px",
                 maxWidth: "480px",
+                maxHeight: "90vh",
+                overflowY: "auto",
                 width: "100%",
                 boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
                 position: "relative",
@@ -601,6 +616,8 @@ export function Events() {
                 borderRadius: "8px",
                 padding: "36px 32px",
                 maxWidth: "480px",
+                maxHeight: "90vh",
+                overflowY: "auto",
                 width: "100%",
                 boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
                 position: "relative",
@@ -655,6 +672,40 @@ export function Events() {
               </div>
 
               <form onSubmit={handleRsvpRequestSubmit}>
+                {selectedEvent.bringOptions && selectedEvent.bringOptions.length > 0 && (
+                  <div style={{ marginBottom: "24px", padding: "18px", backgroundColor: "rgba(199, 154, 75, 0.08)", border: "1px solid rgba(199, 154, 75, 0.25)", borderRadius: "6px" }}>
+                    <div style={{ color: "var(--gold, #c79a4b)", fontFamily: "var(--font-caveat), cursive", fontSize: "21px", marginBottom: "4px" }}>
+                      ~ what can you bring? ~
+                    </div>
+                    <p style={{ margin: "0 0 14px", color: "rgba(246, 239, 228, 0.55)", fontSize: "12px" }}>
+                      Select one or more items you would be happy to bring along.
+                    </p>
+                    <div style={{ display: "grid", gap: "8px" }}>
+                      {selectedEvent.bringOptions.map((option) => {
+                        const isSelected = selectedBringItems.includes(option);
+                        return (
+                          <label
+                            key={option}
+                            style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", backgroundColor: isSelected ? "rgba(199, 154, 75, 0.14)" : "#222", border: `1px solid ${isSelected ? "var(--gold, #c79a4b)" : "#333"}`, borderRadius: "4px", color: "var(--cream, #f6efe4)", fontSize: "13px", cursor: "pointer" }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => setSelectedBringItems((current) =>
+                                current.includes(option)
+                                  ? current.filter((item) => item !== option)
+                                  : [...current, option]
+                              )}
+                              style={{ accentColor: "var(--gold, #c79a4b)" }}
+                            />
+                            {option}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* WhatsApp Number Input */}
                 <div style={{ marginBottom: "24px" }}>
                   <label htmlFor="rsvpRequestPhone" style={{ display: "block", color: "rgba(246, 239, 228, 0.7)", fontSize: "13px", marginBottom: "8px" }}>

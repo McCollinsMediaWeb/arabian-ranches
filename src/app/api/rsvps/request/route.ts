@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser, createRsvp } from "@/lib/db";
+import { getSessionUser, getEvents, createRsvp } from "@/lib/db";
 import { sendEmail } from "@/lib/mail";
 
 export async function POST(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { eventTitle, whatsapp } = await request.json();
+    const { eventTitle, whatsapp, bringItems = [] } = await request.json();
     if (!eventTitle) {
       return NextResponse.json({ message: "Event title is required" }, { status: 400 });
     }
@@ -22,8 +22,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "WhatsApp number is required" }, { status: 400 });
     }
 
+    const events = await getEvents();
+    const event = events.find((item: any) => item.title === eventTitle);
+    if (!event) {
+      return NextResponse.json({ message: "Gathering not found" }, { status: 404 });
+    }
+    const selectedBringItems = Array.isArray(bringItems)
+      ? [...new Set(bringItems.map((item: unknown) => String(item).trim()).filter(Boolean))]
+      : [];
+    const allowedOptions = new Set(event.bringOptions || []);
+    if (selectedBringItems.some((item) => !allowedOptions.has(item))) {
+      return NextResponse.json({ message: "Invalid contribution selection" }, { status: 400 });
+    }
+    if (allowedOptions.size > 0 && selectedBringItems.length === 0) {
+      return NextResponse.json({ message: "Please select what you can bring" }, { status: 400 });
+    }
+
     const rsvpId = `rsvp-${Date.now()}`;
-    await createRsvp(rsvpId, user.id, eventTitle, whatsapp);
+    await createRsvp(rsvpId, user.id, eventTitle, whatsapp, selectedBringItems);
 
     // Send email notification to admin(s)
     const adminEmails = process.env.NOTIFICATION_EMAIL || user.email; // Fallback to user if not set
@@ -39,6 +55,7 @@ Member Details:
 
 Gathering:
 - Event: ${eventTitle}
+${selectedBringItems.length > 0 ? `- Bringing: ${selectedBringItems.join(", ")}` : ""}
 
 Please log in to the admin dashboard to review and approve this request.
 
@@ -66,6 +83,10 @@ Connecting Hearts Bot`;
           <td style="padding: 8px 0; font-weight: bold;">Gathering:</td>
           <td style="padding: 8px 0; color: #b8533a; font-weight: bold;">${eventTitle}</td>
         </tr>
+        ${selectedBringItems.length > 0 ? `<tr>
+          <td style="padding: 8px 0; font-weight: bold;">Bringing:</td>
+          <td style="padding: 8px 0;">${selectedBringItems.join(", ")}</td>
+        </tr>` : ""}
       </table>
       <p>Please log in to the admin dashboard to review and approve this request.</p>
       <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
