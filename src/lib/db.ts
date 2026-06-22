@@ -893,9 +893,12 @@ export async function getAllRsvps() {
   await ensureInitialized();
   const res = await pool.query(
     `SELECT r.id, r.event_title, r.whatsapp, r.bring_items, r.status, r.submitted_at, r.approved_at,
-            u.name as user_name, u.email as user_email, u.picture as user_picture
+            u.name as user_name, u.email as user_email, u.picture as user_picture,
+            e.host as event_host, e.location as event_location, e.time as event_time,
+            e.day as event_day, e.month as event_month, e.month_full as event_month_full
      FROM rsvps r
      JOIN users u ON r.user_id = u.id
+     LEFT JOIN events e ON r.event_title = e.title
      ORDER BY r.submitted_at DESC`
   );
   return res.rows.map((row: any) => ({
@@ -908,7 +911,13 @@ export async function getAllRsvps() {
     approvedAt: row.approved_at,
     userName: row.user_name,
     userEmail: row.user_email,
-    userPicture: row.user_picture
+    userPicture: row.user_picture,
+    eventHost: row.event_host,
+    eventLocation: row.event_location,
+    eventTime: row.event_time,
+    eventDay: row.event_day,
+    eventMonth: row.event_month,
+    eventMonthFull: row.event_month_full
   }));
 }
 

@@ -1220,7 +1220,20 @@ export default function AdminDashboard() {
                                   <span style={{ color: "rgba(246, 239, 228, 0.3)" }}>—</span>
                                 )}
                               </td>
-                              <td style={{ padding: "16px", color: "var(--cream)", fontWeight: "500" }}>{r.eventTitle}</td>
+                              <td style={{ padding: "16px" }}>
+                                <div style={{ fontWeight: "500", color: "var(--cream)", marginBottom: "4px" }}>{r.eventTitle}</div>
+                                {(r.eventHost || r.eventLocation || r.eventTime) && (
+                                  <div style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.45)", display: "flex", flexDirection: "column", gap: "2px" }}>
+                                    {r.eventHost && <span>Host: {r.eventHost}</span>}
+                                    {r.eventLocation && <span>Loc: {r.eventLocation}</span>}
+                                    {(r.eventMonthFull || r.eventTime) && (
+                                      <span style={{ color: "var(--gold, #c79a4b)" }}>
+                                        {r.eventMonthFull} {r.eventDay} {r.eventTime ? `· ${r.eventTime}` : ""}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
                               <td style={{ padding: "16px", color: "rgba(246, 239, 228, 0.7)", fontSize: "12px" }}>
                                 {r.bringItems?.length ? r.bringItems.join(", ") : "—"}
                               </td>
