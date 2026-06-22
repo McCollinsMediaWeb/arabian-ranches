@@ -323,10 +323,15 @@ export async function ensureInitialized() {
         id VARCHAR(50) PRIMARY KEY,
         user_id VARCHAR(100) REFERENCES users(id) ON DELETE CASCADE,
         event_title TEXT REFERENCES events(title) ON DELETE CASCADE,
+        whatsapp TEXT,
         status VARCHAR(20) DEFAULT 'pending',
         submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         approved_at TIMESTAMP
       )
+    `);
+
+    await client.query(`
+      ALTER TABLE rsvps ADD COLUMN IF NOT EXISTS whatsapp TEXT
     `);
 
     // 2. Seed default data if empty
@@ -729,19 +734,19 @@ export async function getUserRsvps(userId: string) {
   return res.rows;
 }
 
-export async function createRsvp(id: string, userId: string, eventTitle: string) {
+export async function createRsvp(id: string, userId: string, eventTitle: string, whatsapp: string) {
   await ensureInitialized();
   await pool.query(
-    `INSERT INTO rsvps (id, user_id, event_title, status)
-     VALUES ($1, $2, $3, 'pending')`,
-    [id, userId, eventTitle]
+    `INSERT INTO rsvps (id, user_id, event_title, whatsapp, status)
+     VALUES ($1, $2, $3, $4, 'pending')`,
+    [id, userId, eventTitle, whatsapp]
   );
 }
 
 export async function getAllRsvps() {
   await ensureInitialized();
   const res = await pool.query(
-    `SELECT r.id, r.event_title, r.status, r.submitted_at, r.approved_at,
+    `SELECT r.id, r.event_title, r.whatsapp, r.status, r.submitted_at, r.approved_at,
             u.name as user_name, u.email as user_email, u.picture as user_picture
      FROM rsvps r
      JOIN users u ON r.user_id = u.id
@@ -750,6 +755,7 @@ export async function getAllRsvps() {
   return res.rows.map((row: any) => ({
     id: row.id,
     eventTitle: row.event_title,
+    whatsapp: row.whatsapp,
     status: row.status,
     submittedAt: row.submitted_at,
     approvedAt: row.approved_at,
@@ -779,6 +785,7 @@ export async function updateRsvpStatus(id: string, status: string) {
   return {
     id: rsvp.id,
     eventTitle: rsvp.event_title,
+    whatsapp: rsvp.whatsapp,
     status: rsvp.status,
     userName: user.name,
     userEmail: user.email

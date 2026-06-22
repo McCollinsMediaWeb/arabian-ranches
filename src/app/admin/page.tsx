@@ -1757,6 +1757,7 @@ export default function AdminDashboard() {
                     <thead>
                       <tr style={{ borderBottom: "1px solid #333", color: "rgba(246, 239, 228, 0.6)" }}>
                         <th style={{ padding: "12px 16px" }}>Member</th>
+                        <th style={{ padding: "12px 16px" }}>WhatsApp</th>
                         <th style={{ padding: "12px 16px" }}>Event</th>
                         <th style={{ padding: "12px 16px" }}>Submitted At</th>
                         <th style={{ padding: "12px 16px" }}>Status</th>
@@ -1779,6 +1780,31 @@ export default function AdminDashboard() {
                                   <div style={{ fontSize: "12px", color: "rgba(246, 239, 228, 0.4)" }}>{r.userEmail}</div>
                                 </div>
                               </div>
+                            </td>
+                            <td style={{ padding: "16px" }}>
+                              {r.whatsapp ? (
+                                <a 
+                                  href={`https://wa.me/${(() => {
+                                    let clean = r.whatsapp.replace(/\D/g, "");
+                                    if (clean.startsWith("05") && clean.length === 10) {
+                                      clean = "971" + clean.substring(1);
+                                    } else if (clean.startsWith("5") && clean.length === 9) {
+                                      clean = "971" + clean;
+                                    }
+                                    return clean;
+                                  })()}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: "#4ade80", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                                >
+                                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ flexShrink: 0 }}>
+                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.835-4.322c1.644.976 3.254 1.486 4.93 1.487 5.389 0 9.772-4.343 9.776-9.686.002-2.585-1.002-5.016-2.831-6.848C16.938 2.799 14.511 1.794 12.01 1.794 6.617 1.794 2.23 6.136 2.227 11.48c-.001 1.722.463 3.4 1.345 4.9l-.994 3.63 3.734-.972.58.344zm11.237-7.279c-.3-.15-1.772-.875-2.046-.975-.276-.1-.476-.15-.676.15-.2.3-.775.975-.95 1.175-.175.2-.35.225-.65.075-.3-.15-1.265-.467-2.41-1.485-.89-.792-1.492-1.77-1.667-2.07-.175-.3-.018-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5s.05-.375-.025-.525-.675-1.625-.925-2.225c-.244-.589-.491-.51-.676-.51-.175-.008-.375-.01-.575-.01-.2 0-.525.075-.8.375-.275.3-1.05 1.025-1.05 2.5s1.075 2.9 1.225 3.1c.15.2 2.115 3.23 5.125 4.53.716.31 1.273.494 1.708.633.72.228 1.375.196 1.892.118.577-.087 1.772-.725 2.022-1.425.25-.7.25-1.3 0-1.425-.075-.125-.275-.2-.575-.35z" />
+                                  </svg>
+                                  <span style={{ borderBottom: "1px solid transparent" }} onMouseEnter={(e) => e.currentTarget.style.borderBottom = "1px solid #4ade80"} onMouseLeave={(e) => e.currentTarget.style.borderBottom = "1px solid transparent"}>{r.whatsapp}</span>
+                                </a>
+                              ) : (
+                                <span style={{ color: "rgba(246, 239, 228, 0.3)" }}>—</span>
+                              )}
                             </td>
                             <td style={{ padding: "16px", color: "var(--cream)", fontWeight: "500" }}>{r.eventTitle}</td>
                             <td style={{ padding: "16px", color: "rgba(246, 239, 228, 0.6)" }}>{new Date(r.submittedAt).toLocaleDateString()}</td>

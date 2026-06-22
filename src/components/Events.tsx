@@ -155,6 +155,12 @@ export function Events() {
   const handleRsvpRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEvent) return;
+    if (!rsvpPhone) {
+      setPopupSuccess(false);
+      setPopupMessage("WhatsApp number is required to request a seat.");
+      setShowFormPopup(true);
+      return;
+    }
     setRsvpSubmitLoading(true);
 
     try {
@@ -165,6 +171,7 @@ export function Events() {
         },
         body: JSON.stringify({
           eventTitle: selectedEvent.title,
+          whatsapp: rsvpPhone,
         }),
       });
 
@@ -180,6 +187,7 @@ export function Events() {
       setPopupMessage(`Your seat request for "${selectedEvent.title}" has been submitted successfully! The administrator will review your request shortly.`);
       setShowFormPopup(true);
       setRsvpConfirmOpen(false);
+      setRsvpPhone(""); // Reset phone
     } catch (err: any) {
       setPopupSuccess(false);
       setPopupMessage(err.message || "Failed to submit seat request. Please try again.");
@@ -647,6 +655,20 @@ export function Events() {
               </div>
 
               <form onSubmit={handleRsvpRequestSubmit}>
+                {/* WhatsApp Number Input */}
+                <div style={{ marginBottom: "24px" }}>
+                  <label htmlFor="rsvpRequestPhone" style={{ display: "block", color: "rgba(246, 239, 228, 0.7)", fontSize: "13px", marginBottom: "8px" }}>
+                    WhatsApp Number
+                  </label>
+                  <PhoneInput
+                    id="rsvpRequestPhone"
+                    required
+                    value={rsvpPhone}
+                    onChange={setRsvpPhone}
+                    theme="dark"
+                  />
+                </div>
+
                 {/* Submit Button */}
                 <div style={{ display: "flex", gap: "12px" }}>
                   <motion.button

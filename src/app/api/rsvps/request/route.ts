@@ -14,13 +14,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { eventTitle } = await request.json();
+    const { eventTitle, whatsapp } = await request.json();
     if (!eventTitle) {
       return NextResponse.json({ message: "Event title is required" }, { status: 400 });
     }
+    if (!whatsapp) {
+      return NextResponse.json({ message: "WhatsApp number is required" }, { status: 400 });
+    }
 
     const rsvpId = `rsvp-${Date.now()}`;
-    await createRsvp(rsvpId, user.id, eventTitle);
+    await createRsvp(rsvpId, user.id, eventTitle, whatsapp);
 
     // Send email notification to admin(s)
     const adminEmails = process.env.NOTIFICATION_EMAIL || user.email; // Fallback to user if not set
@@ -32,6 +35,7 @@ A new seat request has been submitted for an upcoming gathering.
 Member Details:
 - Name: ${user.name}
 - Email: ${user.email}
+- WhatsApp: ${whatsapp}
 
 Gathering:
 - Event: ${eventTitle}
@@ -53,6 +57,10 @@ Connecting Hearts Bot`;
         <tr>
           <td style="padding: 8px 0; font-weight: bold;">Member Email:</td>
           <td style="padding: 8px 0;">${user.email}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold;">WhatsApp:</td>
+          <td style="padding: 8px 0;">${whatsapp}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; font-weight: bold;">Gathering:</td>
