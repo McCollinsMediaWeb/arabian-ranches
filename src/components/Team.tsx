@@ -6,58 +6,54 @@ import { motion } from "framer-motion";
 export function Team() {
   const teamMembers = [
     {
-      initial: "R",
-      name: "Reema Al Mansoori",
-      role: "~ Community Chair ~",
-      location: "Mirador · 58",
-      bio: "Started Connecting Hearts after watching her own mother arrive in Dubai and find herself surrounded yet alone. Believes friendship is the best medicine.",
-      g1: "#c79a4b",
-      g2: "#8f3d29",
-    },
-    {
-      initial: "S",
-      name: "Sophia Nair",
-      role: "~ Events Coordinator ~",
-      location: "Saheel · 54",
-      bio: "A retired teacher who plans every Wednesday with the care of a wedding planner. Brings fresh dates from her own date palm.",
-      g1: "#b8533a",
-      g2: "#d9a48a",
-    },
-    {
-      initial: "M",
-      name: "Margaret O'Connor",
-      role: "~ Buddy System Lead ~",
-      location: "Hattan · 63",
-      bio: "Thirty years a nurse in Ireland and Dubai. First to volunteer when anyone needs a hand at the clinic or a meal during illness.",
-      g1: "#6b6b3a",
-      g2: "#c79a4b",
-    },
-    {
-      initial: "A",
-      name: "Aisha Rahman",
-      role: "~ Crafts & Workshops ~",
-      location: "Saheel · 56",
-      bio: "Crochet queen and quiet pillar of our craft circles. Has taught more than forty ladies their first granny square.",
-      g1: "#8f3d29",
-      g2: "#c79a4b",
-    },
-    {
-      initial: "R",
-      name: "Roya Tehrani",
-      role: "~ Welcome Host ~",
-      location: "Alvorada · 61",
-      bio: "First to greet every new member with Persian tea and a hug. Speaks four languages; warms a room in any of them.",
+      initial: "L",
+      name: "Linda",
+      role: "~ Book Club Host ~",
+      location: "Mirador · 42",
+      bio: "Avid reader who loves sharing stories and hosting weekend book club discussions over homemade cookies.",
+      image: "/team/linda.jpg",
       g1: "#d9a48a",
       g2: "#b8533a",
     },
     {
-      initial: "H",
-      name: "Helen Pereira",
-      role: "~ Communications ~",
-      location: "Hattan · 59",
-      bio: "A former magazine editor who runs our WhatsApp group with kindness. Sourdough is her love language.",
+      initial: "D",
+      name: "Dimple",
+      role: "~ Yoga & Wellness ~",
+      location: "Saheel · 38",
+      bio: "Certified yoga instructor passionate about helping neighbours find peace and mindfulness in their lives.",
+      image: "/team/dimple.jpg",
       g1: "#c79a4b",
-      g2: "#6b6b3a",
+      g2: "#8f3d29",
+    },
+    {
+      initial: "M",
+      name: "Meghna",
+      role: "~ Gardening Enthusiast ~",
+      location: "Alvorada · 47",
+      bio: "Transforms desert yards into blooming sanctuaries and leads our community gardening and seed sharing workshops.",
+      image: "/team/meghna.jpg",
+      g1: "#6b6b3a",
+      g2: "#c79a4b",
+    },
+    {
+      initial: "M",
+      name: "Maya",
+      role: "~ Cooking Circles ~",
+      location: "Hattan · 12",
+      bio: "Brings people together through cooking masterclasses and culinary storytelling sessions featuring global flavours.",
+      image: "/team/maya.jpg",
+      g1: "#b8533a",
+      g2: "#d9a48a",
+    },
+    {
+      initial: "S",
+      name: "Sandya",
+      role: "~ Youth Mentor ~",
+      location: "Mirador · 15",
+      bio: "Retired school counsellor who organises youth tutoring networks and summer camps for the neighborhood children.",
+      image: "/team/sandya.jpg",
+      g1: "#8f3d29",
+      g2: "#c79a4b",
     },
   ];
 
@@ -111,7 +107,7 @@ export function Team() {
           Meet our team.
         </motion.h2>
         <motion.p className="section-intro" variants={textVariants}>
-          Connecting Hearts is run entirely by volunteers — six neighbours who
+          Connecting Hearts is run entirely by volunteers — five neighbours who
           fell in love with the idea of belonging, and decided to build it. Say
           hello when you see them at a gathering.
         </motion.p>
@@ -134,10 +130,23 @@ export function Team() {
                   {
                     "--g1": member.g1,
                     "--g2": member.g2,
+                    overflow: "hidden",
                   } as React.CSSProperties
                 }
               >
-                {member.initial}
+                {member.image ? (
+                  <img
+                    src={member.image}
+                    alt={member.name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  member.initial
+                )}
               </div>
               <h3>{member.name}</h3>
               <p className="role">{member.role}</p>
@@ -146,10 +155,6 @@ export function Team() {
             </motion.div>
           ))}
         </motion.div>
-
-        <motion.p className="replace-note" style={{ marginTop: "40px" }} variants={textVariants}>
-          ↑ placeholder avatars — to be replaced with team member photos
-        </motion.p>
       </div>
     </motion.section>
   );
