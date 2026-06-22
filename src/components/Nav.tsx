@@ -80,7 +80,7 @@ export function Nav() {
       const google = (window as any).google;
       if (google && document.getElementById("google-signin-btn")) {
         google.accounts.id.initialize({
-          client_id: "889286813342-64qcmcdh7rhe4pjfi0tglalh058s0oi5.apps.googleusercontent.com",
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "889286813342-64qcmcdh7rhe4pjfi0tglalh058s0oi5.apps.googleusercontent.com",
           callback: (response: any) => {
             if (response.credential) {
               handleGoogleSuccess(response.credential);

@@ -17,8 +17,13 @@ export async function POST(request: NextRequest) {
 
     const payload = await verifyRes.json();
 
-    // Verify audience matches the client ID
-    if (payload.aud !== process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+    // Verify audience matches the client ID (either custom env var or fallback)
+    const allowedClientIds = [
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      "889286813342-64qcmcdh7rhe4pjfi0tglalh058s0oi5.apps.googleusercontent.com"
+    ].filter(Boolean);
+
+    if (!allowedClientIds.includes(payload.aud)) {
       return NextResponse.json({ message: "Audience mismatch" }, { status: 400 });
     }
 
