@@ -933,10 +933,25 @@
       border-right: 1px dashed rgba(199, 154, 75, 0.5);
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 990px) {
+      .polaroid-strip {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding: 24px 20px 48px;
+        gap: 24px;
+        scrollbar-width: none; /* Hide scrollbar for Firefox */
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .polaroid-strip::-webkit-scrollbar {
+        display: none; /* Hide scrollbar for Chrome/Safari/Opera */
+      }
+
       .polaroid {
-        width: 160px;
-        padding: 10px 10px 40px;
+        flex: 0 0 180px; /* Ensure cards don't shrink inside slider */
+        padding: 12px 12px 42px;
+        margin-top: 0 !important; /* Reset offsets on mobile */
       }
 
       .polaroid-caption {
