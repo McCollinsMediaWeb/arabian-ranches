@@ -348,9 +348,26 @@
       margin-top: 60px;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 990px) {
       .about-grid {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding: 12px 4px 24px 4px;
+        gap: 24px;
+        scrollbar-width: none; /* Hide scrollbar for Firefox */
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+      }
+
+      .about-grid::-webkit-scrollbar {
+        display: none; /* Hide scrollbar for Chrome/Safari/Opera */
+      }
+
+      .about-grid .value-card {
+        flex: 0 0 280px; /* Ensure cards don't shrink inside slider */
+        scroll-snap-align: center;
       }
     }
 
@@ -938,7 +955,7 @@
         flex-wrap: nowrap;
         justify-content: flex-start;
         overflow-x: auto;
-        padding: 24px 20px 48px;
+        padding: 24px 20px 0px;
         gap: 24px;
         scrollbar-width: none; /* Hide scrollbar for Firefox */
         -webkit-overflow-scrolling: touch;
@@ -1872,6 +1889,14 @@
     @media (max-width: 990px) {
       nav {
         padding: 12px 0;
+      }
+
+      section {
+        padding: 50px 0;
+      }
+
+      .featured-photos {
+        padding: 30px 0 50px;
       }
 
       .mobile-menu-btn {
