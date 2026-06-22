@@ -26,7 +26,7 @@ export default function AdminDashboard() {
     rotation: 0,
     marginTop: "0px"
   });
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
 
   // Forms states
@@ -142,51 +142,53 @@ export default function AdminDashboard() {
 
   const handleAddSnapshot = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) {
-      alert("Please choose a photo to upload.");
+    if (selectedFiles.length === 0) {
+      alert("Please choose at least one photo to upload.");
       return;
     }
 
     setLoading(true);
     setUploading(true);
     try {
-      // 1. Upload file
-      const formData = new FormData();
-      formData.append("file", selectedFile);
+      for (const file of selectedFiles) {
+        // 1. Upload file
+        const formData = new FormData();
+        formData.append("file", file);
 
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        headers: {
-          "x-admin-password": authToken || ""
-        },
-        body: formData
-      });
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          headers: {
+            "x-admin-password": authToken || ""
+          },
+          body: formData
+        });
 
-      if (!uploadRes.ok) {
-        const errData = await uploadRes.json();
-        throw new Error(errData.message || "File upload failed");
-      }
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json();
+          throw new Error(errData.message || `File upload failed for ${file.name}`);
+        }
 
-      const uploadData = await uploadRes.json();
-      const imageUrl = uploadData.url;
+        const uploadData = await uploadRes.json();
+        const imageUrl = uploadData.url;
 
-      // 2. Add snapshot details to DB
-      const res = await fetch("/api/snapshots", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-password": authToken || ""
-        },
-        body: JSON.stringify({ imageUrl })
-      });
+        // 2. Add snapshot details to DB
+        const res = await fetch("/api/snapshots", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-password": authToken || ""
+          },
+          body: JSON.stringify({ imageUrl })
+        });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "Failed to add snapshot");
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || `Failed to add snapshot record for ${file.name}`);
+        }
       }
 
       // Reset form and reload
-      setSelectedFile(null);
+      setSelectedFiles([]);
       
       const fileInput = document.getElementById("snapshotFileInput") as HTMLInputElement;
       if (fileInput) fileInput.value = "";
@@ -1282,10 +1284,11 @@ export default function AdminDashboard() {
                       id="snapshotFileInput"
                       type="file"
                       accept="image/*"
+                      multiple
                       required
                       onChange={(e) => {
                         if (e.target.files && e.target.files.length > 0) {
-                          setSelectedFile(e.target.files[0]);
+                          setSelectedFiles(Array.from(e.target.files));
                         }
                       }}
                       style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
