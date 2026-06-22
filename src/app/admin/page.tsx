@@ -142,38 +142,33 @@ export default function AdminDashboard() {
 
   const handleAddSnapshot = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile && !snapshotForm.caption) {
-      alert("Please choose a photo or write a caption.");
+    if (!selectedFile) {
+      alert("Please choose a photo to upload.");
       return;
     }
 
     setLoading(true);
+    setUploading(true);
     try {
-      let imageUrl = null;
+      // 1. Upload file
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-      // 1. Upload file if selected
-      if (selectedFile) {
-        setUploading(true);
-        const formData = new FormData();
-        formData.append("file", selectedFile);
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          "x-admin-password": authToken || ""
+        },
+        body: formData
+      });
 
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          headers: {
-            "x-admin-password": authToken || ""
-          },
-          body: formData
-        });
-
-        if (!uploadRes.ok) {
-          const errData = await uploadRes.json();
-          throw new Error(errData.message || "File upload failed");
-        }
-
-        const uploadData = await uploadRes.json();
-        imageUrl = uploadData.url;
-        setUploading(false);
+      if (!uploadRes.ok) {
+        const errData = await uploadRes.json();
+        throw new Error(errData.message || "File upload failed");
       }
+
+      const uploadData = await uploadRes.json();
+      const imageUrl = uploadData.url;
 
       // 2. Add snapshot details to DB
       const res = await fetch("/api/snapshots", {
@@ -182,14 +177,7 @@ export default function AdminDashboard() {
           "Content-Type": "application/json",
           "x-admin-password": authToken || ""
         },
-        body: JSON.stringify({
-          imageUrl,
-          caption: snapshotForm.caption,
-          p1: snapshotForm.p1,
-          p2: snapshotForm.p2,
-          rotation: snapshotForm.rotation,
-          marginTop: snapshotForm.marginTop
-        })
+        body: JSON.stringify({ imageUrl })
       });
 
       if (!res.ok) {
@@ -198,13 +186,6 @@ export default function AdminDashboard() {
       }
 
       // Reset form and reload
-      setSnapshotForm({
-        caption: "",
-        p1: "#b8533a",
-        p2: "#d9a48a",
-        rotation: 0,
-        marginTop: "0px"
-      });
       setSelectedFile(null);
       
       const fileInput = document.getElementById("snapshotFileInput") as HTMLInputElement;
@@ -215,7 +196,7 @@ export default function AdminDashboard() {
       const snapshotsData = await snapshotsRes.json();
       setSnapshots(snapshotsData);
 
-      alert("Snapshot added successfully!");
+      alert("Snapshot uploaded successfully!");
     } catch (err: any) {
       alert(err.message || "An error occurred");
     } finally {
@@ -1292,15 +1273,16 @@ export default function AdminDashboard() {
               
               {/* Add Snapshot Form */}
               <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
-                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Add Gathering Snapshot</h3>
+                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Upload Gathering Snapshot</h3>
                 <form onSubmit={handleAddSnapshot}>
                   
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Photo Image</label>
+                  <div style={{ marginBottom: "24px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Select Photo</label>
                     <input
                       id="snapshotFileInput"
                       type="file"
                       accept="image/*"
+                      required
                       onChange={(e) => {
                         if (e.target.files && e.target.files.length > 0) {
                           setSelectedFile(e.target.files[0]);
@@ -1308,80 +1290,7 @@ export default function AdminDashboard() {
                       }}
                       style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
                     />
-                    <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>If empty, the polaroid will use default camera icon or SVG drawings.</span>
-                  </div>
-
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Polaroid Caption</label>
-                    <textarea
-                      placeholder="e.g. Persian Tea&#10;& Poetry"
-                      value={snapshotForm.caption}
-                      onChange={(e) => setSnapshotForm({ ...snapshotForm, caption: e.target.value })}
-                      rows={3}
-                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white", fontFamily: "inherit" }}
-                    />
-                    <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>Use Enter to start a new line on the card caption.</span>
-                  </div>
-
-                  {/* Polaroid Rotation and Margin Top */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Rotation Angle (deg)</label>
-                      <input
-                        type="number"
-                        min="-15"
-                        max="15"
-                        value={snapshotForm.rotation}
-                        onChange={(e) => setSnapshotForm({ ...snapshotForm, rotation: parseInt(e.target.value) || 0 })}
-                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Margin Top (px)</label>
-                      <select
-                        value={snapshotForm.marginTop}
-                        onChange={(e) => setSnapshotForm({ ...snapshotForm, marginTop: e.target.value })}
-                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
-                      >
-                        <option value="0px">0px</option>
-                        <option value="10px">10px</option>
-                        <option value="20px">20px</option>
-                        <option value="30px">30px</option>
-                        <option value="40px">40px</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Border Color Pickers */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Gradient Start (p1)</label>
-                      <select
-                        value={snapshotForm.p1}
-                        onChange={(e) => setSnapshotForm({ ...snapshotForm, p1: e.target.value })}
-                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
-                      >
-                        <option value="#b8533a">Terracotta (#b8533a)</option>
-                        <option value="#8f3d29">Deep Red (#8f3d29)</option>
-                        <option value="#6b6b3a">Olive Green (#6b6b3a)</option>
-                        <option value="#d9a48a">Peach (#d9a48a)</option>
-                        <option value="#c79a4b">Gold (#c79a4b)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Gradient End (p2)</label>
-                      <select
-                        value={snapshotForm.p2}
-                        onChange={(e) => setSnapshotForm({ ...snapshotForm, p2: e.target.value })}
-                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
-                      >
-                        <option value="#d9a48a">Peach (#d9a48a)</option>
-                        <option value="#c79a4b">Gold (#c79a4b)</option>
-                        <option value="#b8533a">Terracotta (#b8533a)</option>
-                        <option value="#8f3d29">Deep Red (#8f3d29)</option>
-                        <option value="#6b6b3a">Olive Green (#6b6b3a)</option>
-                      </select>
-                    </div>
+                    <span style={{ display: "block", fontSize: "11px", color: "rgba(246, 239, 228, 0.4)", marginTop: "6px" }}>Choose a snapshot from your gatherings to display on the homepage strip.</span>
                   </div>
 
                   <button
@@ -1399,47 +1308,45 @@ export default function AdminDashboard() {
                       fontSize: "14px"
                     }}
                   >
-                    {uploading ? "Uploading Image..." : "Create Snapshot"}
+                    {uploading ? "Uploading Image..." : "Upload Snapshot"}
                   </button>
                 </form>
               </div>
 
               {/* Manage Snapshots List */}
               <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
-                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Current Snapshots ({snapshots.length})</h3>
-                {snapshots.length === 0 ? (
-                  <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No snapshots in database.</p>
+                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Current Snapshots ({snapshots.filter(s => s.imageUrl).length})</h3>
+                {snapshots.filter(s => s.imageUrl).length === 0 ? (
+                  <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No snapshots uploaded yet.</p>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "600px", overflowY: "auto", paddingRight: "8px" }}>
-                    {snapshots.map((s) => (
-                      <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                          {s.imageUrl ? (
-                            <img src={s.imageUrl} alt="" style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "4px", border: "1px solid #444" }} />
-                          ) : (
-                            <div style={{ width: "50px", height: "50px", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#333", borderRadius: "4px", color: "rgba(246, 239, 228, 0.4)", fontSize: "10px" }}>SVG</div>
-                          )}
-                          <div>
-                            <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "normal" }}>{s.caption.replace(/\n/g, " / ") || "(No caption)"}</h4>
-                            <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>Rot: {s.rotation}° · Margin: {s.marginTop}</span>
+                    {snapshots
+                      .filter(s => s.imageUrl)
+                      .map((s) => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                            <img src={s.imageUrl} alt="" style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "4px", border: "1px solid #444" }} />
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "normal" }}>{s.imageUrl.split("/").pop()}</h4>
+                              <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>Uploaded snapshot</span>
+                            </div>
                           </div>
+                          <button
+                            onClick={() => handleDeleteSnapshot(s.id)}
+                            style={{
+                              padding: "6px 12px",
+                              backgroundColor: "#8f3d29",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "12px"
+                            }}
+                          >
+                            Delete
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleDeleteSnapshot(s.id)}
-                          style={{
-                            padding: "6px 12px",
-                            backgroundColor: "#8f3d29",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            fontSize: "12px"
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </div>
