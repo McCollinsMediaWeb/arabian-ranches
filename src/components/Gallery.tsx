@@ -11,6 +11,7 @@ interface GalleryItem {
   g1: string;
   g2: string;
   deco: "mezze" | "yarn" | "leaves" | "flower";
+  coverPhoto?: string;
   images?: string[];
 }
 
@@ -255,12 +256,16 @@ export function Gallery() {
                   style={{ cursor: hasPhotos ? "pointer" : "default" }}
                   onClick={() => handleCardClick(item)}
                 >
-                  <div
-                    className="bg"
-                    style={{
-                      background: `linear-gradient(135deg, ${item.g1}, ${item.g2})`,
-                    }}
-                  ></div>
+                  {item.coverPhoto ? (
+                    <img className="gallery-cover" src={item.coverPhoto} alt={`${item.title} cover`} />
+                  ) : (
+                    <div
+                      className="bg"
+                      style={{
+                        background: `linear-gradient(135deg, ${item.g1}, ${item.g2})`,
+                      }}
+                    ></div>
+                  )}
                   {decoSVGs[item.deco]}
                   <span className="gallery-photo-tag">{item.photos}</span>
                   <div className="gallery-overlay">

@@ -242,12 +242,17 @@ export async function ensureInitialized() {
         g1 VARCHAR(10),
         g2 VARCHAR(10),
         deco VARCHAR(20),
+        cover_photo TEXT,
         images JSONB DEFAULT '[]'::jsonb
       )
     `);
 
     await client.query(`
       ALTER TABLE gallery ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'::jsonb
+    `);
+
+    await client.query(`
+      ALTER TABLE gallery ADD COLUMN IF NOT EXISTS cover_photo TEXT
     `);
 
     await client.query(`
@@ -532,6 +537,7 @@ export async function getGallery() {
     g1: row.g1,
     g2: row.g2,
     deco: row.deco,
+    coverPhoto: row.cover_photo || "",
     images: row.images ? (typeof row.images === "string" ? JSON.parse(row.images) : row.images) : []
   }));
 }
@@ -544,7 +550,7 @@ export async function saveGallery(gallery: any[]) {
     await client.query("DELETE FROM gallery");
     for (const item of gallery) {
       await client.query(
-        "INSERT INTO gallery (month, title, meta, photos, g1, g2, deco, images) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        "INSERT INTO gallery (month, title, meta, photos, g1, g2, deco, cover_photo, images) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
         [
           item.month,
           item.title,
@@ -553,6 +559,7 @@ export async function saveGallery(gallery: any[]) {
           item.g1,
           item.g2,
           item.deco,
+          item.coverPhoto || "",
           JSON.stringify(item.images || [])
         ]
       );

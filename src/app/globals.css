@@ -1204,6 +1204,14 @@
       background: linear-gradient(135deg, var(--g1, var(--terracotta)), var(--g2, var(--rose)));
     }
 
+    .gallery-card .gallery-cover {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
     .gallery-card .deco-svg {
       position: absolute;
       inset: 0;
@@ -2052,7 +2060,3 @@
     flex-wrap: wrap;
   }
 }
-
-
-
-  

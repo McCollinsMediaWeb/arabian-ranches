@@ -75,6 +75,7 @@ export default function AdminDashboard() {
     g2: "#d9a48a",
     deco: "mezze"
   });
+  const [galleryCoverPhoto, setGalleryCoverPhoto] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   const [weeklyForm, setWeeklyForm] = useState({
@@ -563,14 +564,32 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleGalleryCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setGalleryCoverPhoto(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Add Gallery handler
   const handleAddGallery = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authToken) return;
+    if (!galleryCoverPhoto) {
+      alert("Please select a cover photo.");
+      return;
+    }
 
     try {
       const payload = {
         ...galleryForm,
+        coverPhoto: galleryCoverPhoto,
         images: galleryImages,
         photos: galleryForm.photos || `${galleryImages.length} photo${galleryImages.length !== 1 ? "s" : ""}`
       };
@@ -601,6 +620,7 @@ export default function AdminDashboard() {
         g2: "#d9a48a",
         deco: "mezze"
       });
+      setGalleryCoverPhoto(null);
       setGalleryImages([]);
       
       // Refresh list
@@ -1584,7 +1604,37 @@ export default function AdminDashboard() {
                   {/* Photo Upload Input */}
                   <div style={{ marginBottom: "16px" }}>
                     <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>
-                      Upload Photos
+                      Cover Photo
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      required
+                      onChange={handleGalleryCoverUpload}
+                      style={{ width: "100%", color: "rgba(246, 239, 228, 0.6)", fontSize: "13px" }}
+                    />
+                    {galleryCoverPhoto && (
+                      <div style={{ position: "relative", marginTop: "12px", width: "180px", aspectRatio: "4 / 5" }}>
+                        <img
+                          src={galleryCoverPhoto}
+                          alt="Gallery card cover preview"
+                          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "6px", border: "1px solid #444" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setGalleryCoverPhoto(null)}
+                          aria-label="Remove cover photo"
+                          style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "rgba(0, 0, 0, 0.75)", color: "white", border: "none", borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer" }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>
+                      Upload Album Photos
                     </label>
                     <input
                       type="file"

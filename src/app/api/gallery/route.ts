@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newItem = await request.json();
-    const { month, title, meta, photos, g1, g2, deco, images } = newItem;
+    const { month, title, meta, photos, g1, g2, deco, coverPhoto, images } = newItem;
 
     if (!month || !title || !meta || !photos || !g1 || !g2 || !deco) {
       return Response.json({ message: "Missing required fields" }, { status: 400 });
@@ -42,11 +42,12 @@ export async function POST(request: NextRequest) {
         g1,
         g2,
         deco,
+        coverPhoto: coverPhoto || gallery[existingIndex].coverPhoto || "",
         images: images || gallery[existingIndex].images || []
       };
     } else {
       // Add new
-      gallery.unshift({ month, title, meta, photos, g1, g2, deco, images: images || [] });
+      gallery.unshift({ month, title, meta, photos, g1, g2, deco, coverPhoto: coverPhoto || "", images: images || [] });
     }
     
     await saveGallery(gallery);
