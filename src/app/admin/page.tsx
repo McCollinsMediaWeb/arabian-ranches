@@ -8,7 +8,9 @@ export default function AdminDashboard() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [activeTab, setActiveTab] = useState<"submissions" | "calendar" | "gallery" | "recognition" | "snapshots" | "team" | "members">("submissions");
+  const [activeTab, setActiveTab] = useState<"requests" | "calendar" | "gallery" | "recognition" | "snapshots" | "team" | "members">("requests");
+  const [requestSubTab, setRequestSubTab] = useState<"general" | "members" | "buddy">("general");
+  const [buddySelections, setBuddySelections] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   // Member states
@@ -771,6 +773,43 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAssignBuddy = async (submissionId: string) => {
+    const buddySubmissionId = buddySelections[submissionId];
+    if (!authToken || !buddySubmissionId) {
+      alert("Please select an available buddy.");
+      return;
+    }
+    if (!confirm("Assign this buddy to the request?")) return;
+
+    try {
+      const res = await fetch("/api/submissions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": authToken
+        },
+        body: JSON.stringify({ submissionId, action: "assign", buddySubmissionId })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || "Failed to assign buddy");
+      }
+
+      alert("Buddy assigned successfully!");
+      const freshRes = await fetch("/api/submissions", {
+        headers: { "x-admin-password": authToken }
+      });
+      setSubmissions(await freshRes.json());
+      setBuddySelections((current) => {
+        const next = { ...current };
+        delete next[submissionId];
+        return next;
+      });
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   // Update Buddy of the Week handler
   const handleUpdateWeekly = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -933,6 +972,30 @@ export default function AdminDashboard() {
     );
   }
 
+  const requestTabTitle = requestSubTab === "members"
+    ? "Member Requests & Logs"
+    : requestSubTab === "buddy"
+      ? "Buddy Requests"
+      : "Requests & Logs";
+  const visibleSubmissions = submissions.filter((submission) => {
+    if (requestSubTab === "members") return submission.formType === "register";
+    if (requestSubTab === "buddy") {
+      return submission.formType === "become-buddy" || submission.formType === "request-buddy";
+    }
+    return !["register", "become-buddy", "request-buddy"].includes(submission.formType);
+  });
+  const assignedBuddyIds = new Set(
+    submissions
+      .filter((submission) => submission.formType === "request-buddy" && submission.status === "assigned")
+      .map((submission) => submission.assignedBuddyId)
+      .filter(Boolean)
+  );
+  const availableBuddies = submissions.filter(
+    (submission) => submission.formType === "become-buddy"
+      && submission.status === "approved"
+      && !assignedBuddyIds.has(submission.id)
+  );
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -990,7 +1053,7 @@ export default function AdminDashboard() {
             Dashboard Menu
           </h2>
           {[
-            { id: "submissions", label: "Requests", icon: "📥" },
+            { id: "requests", label: "Requests", icon: "📥" },
             { id: "calendar", label: "Add New Gatherings", icon: "📅" },
             { id: "gallery", label: "Manage Gallery", icon: "🖼️" },
             { id: "recognition", label: "Buddy Recognitions", icon: "🤝" },
@@ -1028,14 +1091,43 @@ export default function AdminDashboard() {
 
         {/* Tab Content Panels */}
         <div style={{ minWidth: "0" }}>
-          {activeTab === "submissions" && (
+          {activeTab === "requests" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "40px" }}>
               <div>
-                <h2 style={{ fontSize: "22px", fontWeight: "normal", margin: 0 }}>Requests & Logs</h2>
+                <h2 style={{ fontSize: "22px", fontWeight: "normal", margin: 0 }}>Requests</h2>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "20px", borderBottom: "1px solid #2a2a2a", paddingBottom: "12px" }}>
+                  {[
+                    { id: "general", label: "Requests & Logs" },
+                    { id: "members", label: "Member Requests & Logs" },
+                    { id: "buddy", label: "Buddy Requests" }
+                  ].map((tab) => {
+                    const isActive = requestSubTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setRequestSubTab(tab.id as "general" | "members" | "buddy")}
+                        style={{
+                          padding: "9px 14px",
+                          borderRadius: "4px",
+                          border: isActive ? "1px solid var(--gold, #c79a4b)" : "1px solid #333",
+                          backgroundColor: isActive ? "rgba(199, 154, 75, 0.12)" : "#1c1c1c",
+                          color: isActive ? "var(--gold, #c79a4b)" : "rgba(246, 239, 228, 0.65)",
+                          cursor: "pointer",
+                          fontSize: "13px",
+                          fontWeight: isActive ? "bold" : "normal"
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Section 1: Gatherings RSVPs (Approvable) */}
-              <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
+              {requestSubTab === "general" && (
+                <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
                 <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Gatherings Seat Requests & RSVPs ({adminRsvps.length})</h3>
                 {adminRsvps.length === 0 ? (
                   <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No seat requests submitted yet.</p>
@@ -1153,20 +1245,22 @@ export default function AdminDashboard() {
                     </table>
                   </div>
                 )}
-              </div>
+                </div>
+              )}
 
               {/* Section 2: Form Requests & Logs */}
               <div>
-                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Form Requests & Logs ({submissions.length})</h3>
-                {submissions.length === 0 ? (
+                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>{requestTabTitle} ({visibleSubmissions.length})</h3>
+                {visibleSubmissions.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "60px", border: "1px dashed #333", borderRadius: "8px" }}>
-                    <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No requests have been recorded yet.</p>
+                    <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No {requestTabTitle.toLowerCase()} have been recorded yet.</p>
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                    {submissions.map((sub) => {
+                    {visibleSubmissions.map((sub) => {
                       const isRegister = sub.formType === "register";
                       const isVolunteer = sub.formType === "become-buddy";
+                      const isBuddyRequest = sub.formType === "request-buddy";
                       const isRsvp = sub.formType === "rsvp";
                       const canReview = isRegister || isVolunteer;
                       
@@ -1196,8 +1290,8 @@ export default function AdminDashboard() {
                           key={sub.id} 
                           style={{
                             backgroundColor: "#1c1c1c",
-                            border: canReview
-                              ? (sub.status === "approved" 
+                            border: canReview || isBuddyRequest
+                              ? (sub.status === "approved" || sub.status === "assigned"
                                 ? "1px solid rgba(199, 154, 75, 0.8)" 
                                 : sub.status === "declined" 
                                   ? "1px solid rgba(143, 61, 41, 0.6)" 
@@ -1248,6 +1342,58 @@ export default function AdminDashboard() {
                               >
                                 WhatsApp Admin Connect
                               </a>
+                              {isBuddyRequest && (
+                                sub.status === "pending" ? (
+                                  <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: "8px", marginTop: "4px" }}>
+                                    <select
+                                      aria-label={`Select buddy for ${sub.name}`}
+                                      value={buddySelections[sub.id] || ""}
+                                      onChange={(e) => setBuddySelections((current) => ({ ...current, [sub.id]: e.target.value }))}
+                                      style={{ padding: "7px 10px", minWidth: "190px", backgroundColor: "#222", border: "1px solid #444", borderRadius: "4px", color: "white", fontSize: "12px" }}
+                                    >
+                                      <option value="">Select available buddy…</option>
+                                      {availableBuddies.map((buddy) => (
+                                        <option key={buddy.id} value={buddy.id}>
+                                          {buddy.name} · {buddy.free || "Flexible"}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      type="button"
+                                      disabled={!buddySelections[sub.id]}
+                                      onClick={() => handleAssignBuddy(sub.id)}
+                                      style={{ padding: "7px 12px", backgroundColor: "var(--gold, #c79a4b)", color: "#121212", border: "none", borderRadius: "4px", cursor: buddySelections[sub.id] ? "pointer" : "not-allowed", opacity: buddySelections[sub.id] ? 1 : 0.5, fontSize: "12px", fontWeight: "bold" }}
+                                    >
+                                      Assign Buddy
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSubmissionAction(sub.id, "decline")}
+                                      style={{ padding: "7px 12px", backgroundColor: "#8f3d29", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}
+                                    >
+                                      Reject
+                                    </button>
+                                    {availableBuddies.length === 0 && (
+                                      <span style={{ width: "100%", color: "rgba(246, 239, 228, 0.45)", fontSize: "11px", textAlign: "right" }}>
+                                        No approved buddies are currently available.
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span style={{
+                                    fontSize: "11px",
+                                    color: sub.status === "assigned" ? "var(--gold, #c79a4b)" : "#8f3d29",
+                                    fontWeight: "bold",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.5px",
+                                    border: `1px solid ${sub.status === "assigned" ? "var(--gold, #c79a4b)" : "#8f3d29"}`,
+                                    padding: "4px 10px",
+                                    borderRadius: "4px"
+                                  }}>
+                                    {sub.status === "assigned" ? `✓ Assigned to ${sub.assignedBuddyName}` : "✗ Rejected"}
+                                  </span>
+                                )
+                              )}
                               {canReview && (
                                 <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
                                   {sub.status === "pending" ? (
@@ -1295,7 +1441,11 @@ export default function AdminDashboard() {
                                       backgroundColor: sub.status === "approved" ? "rgba(199, 154, 75, 0.05)" : "rgba(143, 61, 41, 0.05)"
                                     }}>
                                       {sub.status === "approved"
-                                        ? (isRegister ? "✓ Approved & Team Registered" : "✓ Buddy Approved")
+                                        ? (isRegister
+                                            ? "✓ Approved & Team Registered"
+                                            : assignedBuddyIds.has(sub.id)
+                                              ? "✓ Buddy Assigned"
+                                              : "✓ Available Buddy")
                                         : "✗ Rejected"}
                                     </span>
                                   )}
@@ -1352,6 +1502,13 @@ export default function AdminDashboard() {
                               <div>
                                 <p style={{ margin: "0 0 4px 0", color: "rgba(246, 239, 228, 0.4)" }}>Frequency</p>
                                 <p style={{ margin: 0, fontWeight: "500" }}>{sub.often}</p>
+                              </div>
+                            )}
+                            {sub.assignedBuddyName && (
+                              <div>
+                                <p style={{ margin: "0 0 4px 0", color: "rgba(246, 239, 228, 0.4)" }}>Assigned Buddy</p>
+                                <p style={{ margin: 0, fontWeight: "500", color: "var(--gold, #c79a4b)" }}>{sub.assignedBuddyName}</p>
+                                {sub.assignedBuddyPhone && <p style={{ margin: "4px 0 0", fontSize: "12px" }}>{sub.assignedBuddyPhone}</p>}
                               </div>
                             )}
                           </div>

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSubmissions, updateSubmissionStatus, addTeamMember } from "@/lib/db";
+import { getSubmissions, updateSubmissionStatus, assignBuddyToRequest, addTeamMember } from "@/lib/db";
 
 // GET: Fetch all form submissions (authorized)
 export async function GET(request: NextRequest) {
@@ -27,9 +27,26 @@ export async function POST(request: NextRequest) {
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { submissionId, action } = await request.json();
-    if (!submissionId || !action || !["approve", "decline"].includes(action)) {
+    const { submissionId, action, buddySubmissionId } = await request.json();
+    if (!submissionId || !action || !["approve", "decline", "assign"].includes(action)) {
       return Response.json({ message: "Invalid parameters" }, { status: 400 });
+    }
+
+    if (action === "assign") {
+      if (!buddySubmissionId) {
+        return Response.json({ message: "Please select an available buddy" }, { status: 400 });
+      }
+      await assignBuddyToRequest(submissionId, buddySubmissionId);
+      return Response.json({ message: "Buddy assigned successfully" }, { status: 200 });
+    }
+
+    const submissions = await getSubmissions();
+    const targetSubmission = submissions.find((submission: any) => submission.id === submissionId);
+    if (!targetSubmission) {
+      return Response.json({ message: "Submission not found" }, { status: 404 });
+    }
+    if (action === "approve" && targetSubmission.formType === "request-buddy") {
+      return Response.json({ message: "Select and assign an available buddy instead" }, { status: 400 });
     }
 
     const status = action === "approve" ? "approved" : "declined";
@@ -55,7 +72,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     return Response.json(
       { message: "Failed to update submission status", error: error.message },
-      { status: 500 }
+      { status: error.message?.includes("not available") || error.message?.includes("already") || error.message?.includes("not found") ? 400 : 500 }
     );
   }
 }

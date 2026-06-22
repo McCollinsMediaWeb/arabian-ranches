@@ -280,12 +280,22 @@ export async function ensureInitialized() {
         help_list JSONB,
         need_list JSONB,
         note TEXT,
-        status VARCHAR(20) DEFAULT 'pending'
+        status VARCHAR(20) DEFAULT 'pending',
+        assigned_buddy_id VARCHAR(50),
+        assigned_buddy_name TEXT,
+        assigned_buddy_phone TEXT
       )
     `);
 
     await client.query(`
       ALTER TABLE submissions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'
+    `);
+
+    await client.query(`
+      ALTER TABLE submissions
+        ADD COLUMN IF NOT EXISTS assigned_buddy_id VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS assigned_buddy_name TEXT,
+        ADD COLUMN IF NOT EXISTS assigned_buddy_phone TEXT
     `);
 
     await client.query(`
@@ -610,7 +620,10 @@ export async function getSubmissions() {
     helpList: row.help_list || [],
     needList: row.need_list || [],
     note: row.note,
-    status: row.status || "pending"
+    status: row.status || "pending",
+    assignedBuddyId: row.assigned_buddy_id,
+    assignedBuddyName: row.assigned_buddy_name,
+    assignedBuddyPhone: row.assigned_buddy_phone
   }));
 }
 
@@ -650,6 +663,59 @@ export async function updateSubmissionStatus(id: string, status: string) {
   );
   if (res.rows.length === 0) return null;
   return res.rows[0];
+}
+
+export async function assignBuddyToRequest(requestId: string, buddyId: string) {
+  await ensureInitialized();
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const requestResult = await client.query(
+      "SELECT * FROM submissions WHERE id = $1 FOR UPDATE",
+      [requestId]
+    );
+    const buddyResult = await client.query(
+      "SELECT * FROM submissions WHERE id = $1 FOR UPDATE",
+      [buddyId]
+    );
+
+    const buddyRequest = requestResult.rows[0];
+    const buddy = buddyResult.rows[0];
+    if (!buddyRequest || buddyRequest.form_type !== "request-buddy") {
+      throw new Error("Buddy request not found");
+    }
+    if (buddyRequest.status !== "pending") {
+      throw new Error("This buddy request has already been processed");
+    }
+    if (!buddy || buddy.form_type !== "become-buddy" || buddy.status !== "approved") {
+      throw new Error("The selected buddy is not available");
+    }
+
+    const existingAssignment = await client.query(
+      "SELECT id FROM submissions WHERE assigned_buddy_id = $1 AND status = 'assigned' LIMIT 1",
+      [buddyId]
+    );
+    if (existingAssignment.rows.length > 0) {
+      throw new Error("The selected buddy has already been assigned");
+    }
+
+    const updated = await client.query(
+      `UPDATE submissions
+       SET status = 'assigned', assigned_buddy_id = $1, assigned_buddy_name = $2, assigned_buddy_phone = $3
+       WHERE id = $4
+       RETURNING *`,
+      [buddy.id, buddy.name, buddy.phone, requestId]
+    );
+
+    await client.query("COMMIT");
+    return updated.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // Snapshots DB functions
