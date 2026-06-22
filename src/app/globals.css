@@ -1964,6 +1964,9 @@
     .iti-phone-dark .iti__dial-code {
       color: rgba(246, 239, 228, 0.5) !important;
     }
+    .iti-phone-dark .iti__selected-dial-code {
+      color: var(--cream, #f6efe4) !important;
+    }
 
     /* Light Dropdown Menu */
     .iti-phone-light .iti__dropdown-content,
@@ -2007,6 +2010,48 @@
     .iti-phone-light .iti__dial-code {
       color: rgba(18, 18, 18, 0.5) !important;
     }
+    .iti-phone-light .iti__selected-dial-code {
+      color: var(--ink, #121212) !important;
+    }
+
+/* Admin Dashboard Sidebar Layout */
+.admin-container {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 40px;
+  align-items: start;
+  max-width: 1400px;
+  margin: 40px auto 0 auto;
+  padding: 0 40px;
+}
+
+.admin-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-right: 1px solid rgba(246, 239, 228, 0.1);
+  padding-right: 20px;
+  position: sticky;
+  top: 40px;
+}
+
+@media (max-width: 1024px) {
+  .admin-container {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 0 20px;
+  }
+  
+  .admin-sidebar {
+    border-right: none;
+    border-bottom: 1px solid rgba(246, 239, 228, 0.1);
+    padding-right: 0;
+    padding-bottom: 20px;
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
 
 
 

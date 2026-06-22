@@ -718,23 +718,29 @@ export default function AdminDashboard() {
       </header>
 
       {/* Main Content Area */}
-      <div style={{ maxWidth: "1200px", margin: "40px auto 0 auto", padding: "0 20px" }}>
+      <div className="admin-container">
         
-        {/* Navigation Tabs */}
-        <div style={{
-          display: "flex",
-          borderBottom: "1px solid rgba(246, 239, 228, 0.1)",
-          marginBottom: "32px",
-          gap: "8px"
-        }}>
+        {/* Navigation Sidebar */}
+        <aside className="admin-sidebar">
+          <h2 style={{
+            fontSize: "11px",
+            color: "rgba(246, 239, 228, 0.3)",
+            textTransform: "uppercase",
+            letterSpacing: "2px",
+            marginBottom: "12px",
+            paddingLeft: "12px",
+            fontWeight: "bold"
+          }}>
+            Dashboard Menu
+          </h2>
           {[
-            { id: "submissions", label: "Form Submissions" },
-            { id: "calendar", label: "Manage Calendar" },
-            { id: "gallery", label: "Manage Gallery" },
-            { id: "recognition", label: "Buddy Recognitions" },
-            { id: "snapshots", label: "Gathering Snapshots" },
-            { id: "team", label: "Meet Our Team" },
-            { id: "rsvps", label: "Gatherings RSVPs" }
+            { id: "submissions", label: "Form Submissions", icon: "📥" },
+            { id: "calendar", label: "Manage Calendar", icon: "📅" },
+            { id: "gallery", label: "Manage Gallery", icon: "🖼️" },
+            { id: "recognition", label: "Buddy Recognitions", icon: "🤝" },
+            { id: "snapshots", label: "Gathering Snapshots", icon: "📸" },
+            { id: "team", label: "Meet Our Team", icon: "👥" },
+            { id: "rsvps", label: "Gatherings RSVPs", icon: "✓" }
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -742,25 +748,30 @@ export default function AdminDashboard() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 style={{
-                  padding: "12px 24px",
-                  backgroundColor: "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "12px 16px",
+                  backgroundColor: isActive ? "rgba(199, 154, 75, 0.1)" : "transparent",
                   border: "none",
-                  color: isActive ? "var(--gold, #c79a4b)" : "rgba(246, 239, 228, 0.5)",
+                  borderRadius: "6px",
+                  color: isActive ? "var(--gold, #c79a4b)" : "rgba(246, 239, 228, 0.7)",
                   cursor: "pointer",
-                  fontSize: "15px",
-                  borderBottom: isActive ? "2px solid var(--gold, #c79a4b)" : "2px solid transparent",
-                  marginBottom: "-1px",
+                  fontSize: "14px",
+                  fontWeight: isActive ? "500" : "normal",
+                  textAlign: "left",
                   transition: "all 0.2s"
                 }}
               >
+                <span style={{ fontSize: "16px", opacity: isActive ? 1 : 0.6 }}>{tab.icon}</span>
                 {tab.label}
               </button>
             );
           })}
-        </div>
+        </aside>
 
         {/* Tab Content Panels */}
-        <div>
+        <div style={{ minWidth: "0" }}>
 
           {/* 1. Submissions Tab */}
           {activeTab === "submissions" && (
