@@ -734,7 +734,8 @@ export default function AdminDashboard() {
 
   // Process Submission Action handler (Approve/Decline)
   const handleSubmissionAction = async (submissionId: string, action: "approve" | "decline") => {
-    if (!authToken || !confirm(`Are you sure you want to ${action} this registration?`)) return;
+    const actionLabel = action === "approve" ? "approve" : "reject";
+    if (!authToken || !confirm(`Are you sure you want to ${actionLabel} this request?`)) return;
 
     try {
       const res = await fetch("/api/submissions", {
@@ -752,7 +753,7 @@ export default function AdminDashboard() {
         throw new Error(data.message || `Failed to ${action} submission`);
       }
 
-      alert(`Submission successfully ${action}d!`);
+      alert(`Request successfully ${action === "approve" ? "approved" : "rejected"}!`);
 
       // Refresh list
       const freshRes = await fetch("/api/submissions", {
@@ -1167,6 +1168,7 @@ export default function AdminDashboard() {
                       const isRegister = sub.formType === "register";
                       const isVolunteer = sub.formType === "become-buddy";
                       const isRsvp = sub.formType === "rsvp";
+                      const canReview = isRegister || isVolunteer;
                       
                       // Format WhatsApp link message
                       let customMsg = "";
@@ -1194,7 +1196,7 @@ export default function AdminDashboard() {
                           key={sub.id} 
                           style={{
                             backgroundColor: "#1c1c1c",
-                            border: isRegister 
+                            border: canReview
                               ? (sub.status === "approved" 
                                 ? "1px solid rgba(199, 154, 75, 0.8)" 
                                 : sub.status === "declined" 
@@ -1246,7 +1248,7 @@ export default function AdminDashboard() {
                               >
                                 WhatsApp Admin Connect
                               </a>
-                              {isRegister && (
+                              {canReview && (
                                 <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
                                   {sub.status === "pending" ? (
                                     <>
@@ -1277,7 +1279,7 @@ export default function AdminDashboard() {
                                           fontSize: "12px"
                                         }}
                                       >
-                                        Decline
+                                        Reject
                                       </button>
                                     </>
                                   ) : (
@@ -1292,7 +1294,9 @@ export default function AdminDashboard() {
                                       borderRadius: "4px",
                                       backgroundColor: sub.status === "approved" ? "rgba(199, 154, 75, 0.05)" : "rgba(143, 61, 41, 0.05)"
                                     }}>
-                                      {sub.status === "approved" ? "✓ Approved & Team Registered" : "✗ Declined"}
+                                      {sub.status === "approved"
+                                        ? (isRegister ? "✓ Approved & Team Registered" : "✓ Buddy Approved")
+                                        : "✗ Rejected"}
                                     </span>
                                   )}
                                 </div>
