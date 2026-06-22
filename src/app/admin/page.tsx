@@ -8,7 +8,7 @@ export default function AdminDashboard() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [activeTab, setActiveTab] = useState<"submissions" | "calendar" | "gallery" | "recognition" | "snapshots">("submissions");
+  const [activeTab, setActiveTab] = useState<"submissions" | "calendar" | "gallery" | "recognition" | "snapshots" | "team">("submissions");
   const [loading, setLoading] = useState(false);
 
   // Data states
@@ -28,6 +28,19 @@ export default function AdminDashboard() {
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  // Team states
+  const [team, setTeam] = useState<any[]>([]);
+  const [teamForm, setTeamForm] = useState({
+    id: "",
+    name: "",
+    role: "",
+    location: "",
+    bio: "",
+    g1: "#d9a48a",
+    g2: "#b8533a"
+  });
+  const [teamImage, setTeamImage] = useState<string | null>(null);
 
   // Forms states
   const [eventForm, setEventForm] = useState({
@@ -97,22 +110,25 @@ export default function AdminDashboard() {
 
   const loadAllData = async (pass: string) => {
     try {
-      const [eventsRes, galleryRes, recRes, snapshotsRes] = await Promise.all([
+      const [eventsRes, galleryRes, recRes, snapshotsRes, teamRes] = await Promise.all([
         fetch("/api/events"),
         fetch("/api/gallery"),
         fetch("/api/recognition"),
-        fetch("/api/snapshots")
+        fetch("/api/snapshots"),
+        fetch("/api/team")
       ]);
 
       const eventsData = await eventsRes.json();
       const galleryData = await galleryRes.json();
       const recData = await recRes.json();
       const snapshotsData = await snapshotsRes.json();
+      const teamData = await teamRes.json();
 
       setEvents(eventsData);
       setGallery(galleryData);
       setRecognition(recData);
       setSnapshots(snapshotsData);
+      setTeam(teamData);
 
       if (recData?.buddyOfWeek) {
         setWeeklyForm({
@@ -222,6 +238,112 @@ export default function AdminDashboard() {
       setSnapshots(snapshotsData);
 
       alert("Snapshot deleted successfully!");
+    } catch (err: any) {
+      alert(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Team management handlers
+  const handleSaveTeamMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamForm.name) {
+      alert("Name is required.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/team", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": authToken || ""
+        },
+        body: JSON.stringify({
+          id: teamForm.id || `member-${Date.now()}`,
+          name: teamForm.name,
+          role: teamForm.role,
+          location: teamForm.location,
+          bio: teamForm.bio,
+          image: teamImage,
+          g1: teamForm.g1,
+          g2: teamForm.g2
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to save team member");
+      }
+
+      // Reset form
+      setTeamForm({
+        id: "",
+        name: "",
+        role: "",
+        location: "",
+        bio: "",
+        g1: "#d9a48a",
+        g2: "#b8533a"
+      });
+      setTeamImage(null);
+      const fileInput = document.getElementById("teamFileInput") as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+
+      // Reload team data
+      const teamRes = await fetch("/api/team");
+      const teamData = await teamRes.json();
+      setTeam(teamData);
+
+      alert("Team member saved successfully!");
+    } catch (err: any) {
+      alert(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditTeamMember = (member: any) => {
+    setTeamForm({
+      id: member.id,
+      name: member.name || "",
+      role: member.role || "",
+      location: member.location || "",
+      bio: member.bio || "",
+      g1: member.g1 || "#d9a48a",
+      g2: member.g2 || "#b8533a"
+    });
+    setTeamImage(member.image || null);
+    
+    // Smoothly scroll to the form
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleDeleteTeamMember = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this team member?")) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/team?id=${id}`, {
+        method: "DELETE",
+        headers: {
+          "x-admin-password": authToken || ""
+        }
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to delete team member");
+      }
+
+      // Reload team data
+      const teamRes = await fetch("/api/team");
+      const teamData = await teamRes.json();
+      setTeam(teamData);
+
+      alert("Team member deleted successfully!");
     } catch (err: any) {
       alert(err.message || "An error occurred");
     } finally {
@@ -574,7 +696,8 @@ export default function AdminDashboard() {
             { id: "calendar", label: "Manage Calendar" },
             { id: "gallery", label: "Manage Gallery" },
             { id: "recognition", label: "Buddy Recognitions" },
-            { id: "snapshots", label: "Gathering Snapshots" }
+            { id: "snapshots", label: "Gathering Snapshots" },
+            { id: "team", label: "Meet Our Team" }
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -1342,6 +1465,241 @@ export default function AdminDashboard() {
                           </button>
                         </div>
                       ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+
+          {/* 6. Meet Our Team Tab */}
+          {activeTab === "team" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "40px", marginBottom: "40px" }}>
+              
+              {/* Add/Edit Team Member Form */}
+              <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>
+                  {teamForm.id ? "Edit Team Member" : "Add Team Member"}
+                </h3>
+                <form onSubmit={handleSaveTeamMember}>
+                  
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={teamForm.name}
+                      onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      placeholder="e.g. Linda"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Role</label>
+                    <input
+                      type="text"
+                      value={teamForm.role}
+                      onChange={(e) => setTeamForm({ ...teamForm, role: e.target.value })}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      placeholder="e.g. ~ Book Club Host ~"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Location</label>
+                    <input
+                      type="text"
+                      value={teamForm.location}
+                      onChange={(e) => setTeamForm({ ...teamForm, location: e.target.value })}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      placeholder="e.g. Mirador · 42"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Bio</label>
+                    <textarea
+                      rows={3}
+                      value={teamForm.bio}
+                      onChange={(e) => setTeamForm({ ...teamForm, bio: e.target.value })}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white", resize: "vertical" }}
+                      placeholder="Avid reader who loves sharing stories..."
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Profile Photo</label>
+                    <input
+                      id="teamFileInput"
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          const file = e.target.files[0];
+                          const reader = new FileReader();
+                          reader.readAsDataURL(file);
+                          reader.onload = () => {
+                            setTeamImage(reader.result as string);
+                          };
+                        }
+                      }}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                    />
+                    {teamImage && (
+                      <div style={{ marginTop: "10px", position: "relative", width: "80px", height: "80px" }}>
+                        <img src={teamImage} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%", border: "2px solid var(--gold)" }} />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTeamImage(null);
+                            const fileInput = document.getElementById("teamFileInput") as HTMLInputElement;
+                            if (fileInput) fileInput.value = "";
+                          }}
+                          style={{ position: "absolute", top: "-5px", right: "-5px", backgroundColor: "#8f3d29", color: "white", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginBottom: "24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Border Color 1</label>
+                      <select
+                        value={teamForm.g1}
+                        onChange={(e) => setTeamForm({ ...teamForm, g1: e.target.value })}
+                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      >
+                        <option value="#d9a48a">Terracotta Light (#d9a48a)</option>
+                        <option value="#b8533a">Terracotta (#b8533a)</option>
+                        <option value="#8f3d29">Terracotta Deep (#8f3d29)</option>
+                        <option value="#c79a4b">Gold (#c79a4b)</option>
+                        <option value="#6b6b3a">Olive Green (#6b6b3a)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Border Color 2</label>
+                      <select
+                        value={teamForm.g2}
+                        onChange={(e) => setTeamForm({ ...teamForm, g2: e.target.value })}
+                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      >
+                        <option value="#b8533a">Terracotta (#b8533a)</option>
+                        <option value="#d9a48a">Terracotta Light (#d9a48a)</option>
+                        <option value="#8f3d29">Terracotta Deep (#8f3d29)</option>
+                        <option value="#c79a4b">Gold (#c79a4b)</option>
+                        <option value="#6b6b3a">Olive Green (#6b6b3a)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                      type="submit"
+                      style={{
+                        flex: 1,
+                        padding: "12px",
+                        backgroundColor: "var(--gold, #c79a4b)",
+                        color: "#121212",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                        fontSize: "14px"
+                      }}
+                    >
+                      {teamForm.id ? "Update Member" : "Add Member"}
+                    </button>
+                    {teamForm.id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTeamForm({
+                            id: "",
+                            name: "",
+                            role: "",
+                            location: "",
+                            bio: "",
+                            g1: "#d9a48a",
+                            g2: "#b8533a"
+                          });
+                          setTeamImage(null);
+                          const fileInput = document.getElementById("teamFileInput") as HTMLInputElement;
+                          if (fileInput) fileInput.value = "";
+                        }}
+                        style={{
+                          padding: "12px 20px",
+                          backgroundColor: "#333",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "14px"
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              {/* Manage Team Members Grid */}
+              <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Current Team Members ({team.length})</h3>
+                {team.length === 0 ? (
+                  <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No team members found.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "600px", overflowY: "auto", paddingRight: "8px" }}>
+                    {team.map((m) => (
+                      <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                          {m.image ? (
+                            <img src={m.image} alt={m.name} style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "50%", border: "2px solid var(--gold)" }} />
+                          ) : (
+                            <div style={{ width: "50px", height: "50px", borderRadius: "50%", backgroundColor: "var(--gold)", color: "black", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>
+                              {m.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "normal" }}>{m.name}</h4>
+                            <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>{m.role || "Volunteer"} · {m.location}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            onClick={() => handleEditTeamMember(m)}
+                            style={{
+                              padding: "6px 12px",
+                              backgroundColor: "#333",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "12px"
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTeamMember(m.id)}
+                            style={{
+                              padding: "6px 12px",
+                              backgroundColor: "#8f3d29",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "12px"
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

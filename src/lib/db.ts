@@ -286,6 +286,20 @@ export async function ensureInitialized() {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS team (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(100),
+        role VARCHAR(100),
+        location VARCHAR(100),
+        bio TEXT,
+        image TEXT,
+        g1 VARCHAR(10),
+        g2 VARCHAR(10),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // 2. Seed default data if empty
     const eventsCount = await client.query("SELECT COUNT(*) FROM events");
     if (parseInt(eventsCount.rows[0].count) === 0) {
@@ -359,6 +373,68 @@ export async function ensureInitialized() {
         await client.query(
           "INSERT INTO snapshots (id, image_url, caption, p1, p2, rotation, margin_top) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING",
           [s.id, s.image_url, s.caption, s.p1, s.p2, s.rotation, s.margin_top]
+        );
+      }
+    }
+
+    const teamCount = await client.query("SELECT COUNT(*) FROM team");
+    if (parseInt(teamCount.rows[0].count) === 0) {
+      const INITIAL_TEAM = [
+        {
+          id: "member-1",
+          name: "Linda",
+          role: "~ Book Club Host ~",
+          location: "Mirador · 42",
+          bio: "Avid reader who loves sharing stories and hosting weekend book club discussions over homemade cookies.",
+          image: "/team/linda.jpg",
+          g1: "#d9a48a",
+          g2: "#b8533a"
+        },
+        {
+          id: "member-2",
+          name: "Dimple",
+          role: "~ Yoga & Wellness ~",
+          location: "Saheel · 38",
+          bio: "Certified yoga instructor passionate about helping neighbours find peace and mindfulness in their lives.",
+          image: "/team/dimple.jpg",
+          g1: "#c79a4b",
+          g2: "#8f3d29"
+        },
+        {
+          id: "member-3",
+          name: "Meghna",
+          role: "~ Gardening Enthusiast ~",
+          location: "Alvorada · 47",
+          bio: "Transforms desert yards into blooming sanctuaries and leads our community gardening and seed sharing workshops.",
+          image: "/team/meghna.jpg",
+          g1: "#6b6b3a",
+          g2: "#c79a4b"
+        },
+        {
+          id: "member-4",
+          name: "Maya",
+          role: "~ Cooking Circles ~",
+          location: "Hattan · 12",
+          bio: "Brings people together through cooking masterclasses and culinary storytelling sessions featuring global flavours.",
+          image: "/team/maya.jpg",
+          g1: "#b8533a",
+          g2: "#d9a48a"
+        },
+        {
+          id: "member-5",
+          name: "Sandya",
+          role: "~ Youth Mentor ~",
+          location: "Mirador · 15",
+          bio: "Retired school counsellor who organises youth tutoring networks and summer camps for the neighborhood children.",
+          image: "/team/sandya.jpg",
+          g1: "#8f3d29",
+          g2: "#c79a4b"
+        }
+      ];
+      for (const m of INITIAL_TEAM) {
+        await client.query(
+          "INSERT INTO team (id, name, role, location, bio, image, g1, g2) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING",
+          [m.id, m.name, m.role, m.location, m.bio, m.image, m.g1, m.g2]
         );
       }
     }
@@ -531,4 +607,47 @@ export async function addSnapshot(s: any) {
 export async function deleteSnapshot(id: string) {
   await ensureInitialized();
   await pool.query("DELETE FROM snapshots WHERE id = $1", [id]);
+}
+
+// Team DB functions
+export async function getTeamMembers() {
+  await ensureInitialized();
+  const res = await pool.query("SELECT * FROM team ORDER BY created_at ASC");
+  return res.rows.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    location: row.location,
+    bio: row.bio,
+    image: row.image,
+    g1: row.g1,
+    g2: row.g2,
+    createdAt: row.created_at
+  }));
+}
+
+export async function addTeamMember(m: any) {
+  await ensureInitialized();
+  await pool.query(
+    `INSERT INTO team (id, name, role, location, bio, image, g1, g2)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (id) DO UPDATE 
+     SET name = EXCLUDED.name, role = EXCLUDED.role, location = EXCLUDED.location, 
+         bio = EXCLUDED.bio, image = COALESCE(EXCLUDED.image, team.image), g1 = EXCLUDED.g1, g2 = EXCLUDED.g2`,
+    [
+      m.id || Date.now().toString(),
+      m.name,
+      m.role,
+      m.location,
+      m.bio,
+      m.image || null,
+      m.g1 || "#d9a48a",
+      m.g2 || "#b8533a"
+    ]
+  );
+}
+
+export async function deleteTeamMember(id: string) {
+  await ensureInitialized();
+  await pool.query("DELETE FROM team WHERE id = $1", [id]);
 }

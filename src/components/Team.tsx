@@ -4,9 +4,9 @@ import React from "react";
 import { motion } from "framer-motion";
 
 export function Team() {
-  const teamMembers = [
+  const DEFAULT_TEAM = [
     {
-      initial: "L",
+      id: "member-1",
       name: "Linda",
       role: "~ Book Club Host ~",
       location: "Mirador · 42",
@@ -16,7 +16,7 @@ export function Team() {
       g2: "#b8533a",
     },
     {
-      initial: "D",
+      id: "member-2",
       name: "Dimple",
       role: "~ Yoga & Wellness ~",
       location: "Saheel · 38",
@@ -26,7 +26,7 @@ export function Team() {
       g2: "#8f3d29",
     },
     {
-      initial: "M",
+      id: "member-3",
       name: "Meghna",
       role: "~ Gardening Enthusiast ~",
       location: "Alvorada · 47",
@@ -36,7 +36,7 @@ export function Team() {
       g2: "#c79a4b",
     },
     {
-      initial: "M",
+      id: "member-4",
       name: "Maya",
       role: "~ Cooking Circles ~",
       location: "Hattan · 12",
@@ -46,7 +46,7 @@ export function Team() {
       g2: "#d9a48a",
     },
     {
-      initial: "S",
+      id: "member-5",
       name: "Sandya",
       role: "~ Youth Mentor ~",
       location: "Mirador · 15",
@@ -56,6 +56,27 @@ export function Team() {
       g2: "#c79a4b",
     },
   ];
+
+  const [teamMembers, setTeamMembers] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetch("/api/team")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.length > 0) {
+          setTeamMembers(data);
+        } else {
+          setTeamMembers(DEFAULT_TEAM);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load team members:", err);
+        setTeamMembers(DEFAULT_TEAM);
+        setLoading(false);
+      });
+  }, []);
 
   const containerVariants = {
     hidden: {},
@@ -145,7 +166,7 @@ export function Team() {
                     }}
                   />
                 ) : (
-                  member.initial
+                  member.name ? member.name.charAt(0).toUpperCase() : ""
                 )}
               </div>
               <h3>{member.name}</h3>
