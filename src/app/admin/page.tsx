@@ -8,8 +8,20 @@ export default function AdminDashboard() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [activeTab, setActiveTab] = useState<"submissions" | "calendar" | "gallery" | "recognition" | "snapshots" | "team" | "rsvps">("submissions");
+  const [activeTab, setActiveTab] = useState<"submissions" | "calendar" | "gallery" | "recognition" | "snapshots" | "team" | "members" | "rsvps">("submissions");
   const [loading, setLoading] = useState(false);
+
+  // Member states
+  const [memberForm, setMemberForm] = useState({
+    id: "",
+    name: "",
+    role: "Member",
+    location: "",
+    bio: "",
+    g1: "#d9a48a",
+    g2: "#b8533a"
+  });
+  const [memberImage, setMemberImage] = useState<string | null>(null);
 
   // Data states
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -63,6 +75,7 @@ export default function AdminDashboard() {
     g2: "#d9a48a",
     deco: "mezze"
   });
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   const [weeklyForm, setWeeklyForm] = useState({
     name: "",
@@ -247,6 +260,82 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Member management handlers
+  const handleSaveMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!memberForm.name) {
+      alert("Name is required.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/team", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": authToken || ""
+        },
+        body: JSON.stringify({
+          id: memberForm.id || `member-${Date.now()}`,
+          name: memberForm.name,
+          role: memberForm.role,
+          location: memberForm.location,
+          bio: memberForm.bio,
+          image: memberImage,
+          g1: memberForm.g1,
+          g2: memberForm.g2
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to save member");
+      }
+
+      // Reset form
+      setMemberForm({
+        id: "",
+        name: "",
+        role: "Member",
+        location: "",
+        bio: "",
+        g1: "#d9a48a",
+        g2: "#b8533a"
+      });
+      setMemberImage(null);
+      const fileInput = document.getElementById("memberFileInput") as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+
+      // Reload team data
+      const teamRes = await fetch("/api/team");
+      const teamData = await teamRes.json();
+      setTeam(teamData);
+
+      alert("Member saved successfully!");
+    } catch (err: any) {
+      alert(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditMember = (m: any) => {
+    setMemberForm({
+      id: m.id,
+      name: m.name || "",
+      role: m.role || "Member",
+      location: m.location || "",
+      bio: m.bio || "",
+      g1: m.g1 || "#d9a48a",
+      g2: m.g2 || "#b8533a"
+    });
+    setMemberImage(m.image || null);
+    
+    // Smoothly scroll to the form
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Team management handlers
@@ -451,19 +540,48 @@ export default function AdminDashboard() {
     }
   };
 
+  // File upload handler for new gallery card creation
+  const handleGalleryImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const loadedImages: string[] = [];
+    let processedCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          loadedImages.push(reader.result);
+        }
+        processedCount++;
+        if (processedCount === files.length) {
+          setGalleryImages((prev) => [...prev, ...loadedImages]);
+        }
+      };
+      reader.readAsDataURL(files[i]);
+    }
+  };
+
   // Add Gallery handler
   const handleAddGallery = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authToken) return;
 
     try {
+      const payload = {
+        ...galleryForm,
+        images: galleryImages,
+        photos: galleryForm.photos || `${galleryImages.length} photo${galleryImages.length !== 1 ? "s" : ""}`
+      };
+
       const res = await fetch("/api/gallery", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-admin-password": authToken
         },
-        body: JSON.stringify(galleryForm)
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -472,7 +590,7 @@ export default function AdminDashboard() {
         throw new Error(data.message || "Failed to add gallery item");
       }
 
-      alert("Gallery item added successfully!");
+      alert("Gallery item saved successfully!");
       // Reset form
       setGalleryForm({
         month: "",
@@ -483,11 +601,90 @@ export default function AdminDashboard() {
         g2: "#d9a48a",
         deco: "mezze"
       });
+      setGalleryImages([]);
+      
       // Refresh list
       const freshRes = await fetch("/api/gallery");
       setGallery(await freshRes.json());
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  // Remove individual photo from an existing gallery card
+  const handleRemoveImageFromGallery = async (galleryItem: any, imageIndexToRemove: number) => {
+    if (!authToken) return;
+    try {
+      const updatedImages = (galleryItem.images || []).filter((_: any, idx: number) => idx !== imageIndexToRemove);
+      
+      const res = await fetch("/api/gallery", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": authToken
+        },
+        body: JSON.stringify({
+          ...galleryItem,
+          images: updatedImages,
+          photos: `${updatedImages.length} photo${updatedImages.length !== 1 ? "s" : ""}`
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to remove image");
+      }
+
+      // Reload gallery list
+      const freshRes = await fetch("/api/gallery");
+      setGallery(await freshRes.json());
+    } catch (err: any) {
+      alert(err.message || "Failed to update album images");
+    }
+  };
+
+  // Add multiple photos to an existing gallery card
+  const handleAddImagesToExistingGallery = async (galleryItem: any, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !authToken) return;
+
+    try {
+      const readFilePromises = Array.from(files).map((file) => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (typeof reader.result === "string") {
+              resolve(reader.result);
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const newBase64Images = await Promise.all(readFilePromises);
+      const updatedImages = [...(galleryItem.images || []), ...newBase64Images];
+
+      const res = await fetch("/api/gallery", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": authToken
+        },
+        body: JSON.stringify({
+          ...galleryItem,
+          images: updatedImages,
+          photos: `${updatedImages.length} photo${updatedImages.length !== 1 ? "s" : ""}`
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to add images");
+      }
+
+      // Reload gallery list
+      const freshRes = await fetch("/api/gallery");
+      setGallery(await freshRes.json());
+    } catch (err: any) {
+      alert(err.message || "Failed to add images to album");
     }
   };
 
@@ -510,6 +707,44 @@ export default function AdminDashboard() {
       // Refresh list
       const freshRes = await fetch("/api/gallery");
       setGallery(await freshRes.json());
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // Process Submission Action handler (Approve/Decline)
+  const handleSubmissionAction = async (submissionId: string, action: "approve" | "decline") => {
+    if (!authToken || !confirm(`Are you sure you want to ${action} this registration?`)) return;
+
+    try {
+      const res = await fetch("/api/submissions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": authToken
+        },
+        body: JSON.stringify({ submissionId, action })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || `Failed to ${action} submission`);
+      }
+
+      alert(`Submission successfully ${action}d!`);
+
+      // Refresh list
+      const freshRes = await fetch("/api/submissions", {
+        headers: { "x-admin-password": authToken }
+      });
+      setSubmissions(await freshRes.json());
+      
+      // Also refresh team if approved!
+      if (action === "approve") {
+        const freshTeamRes = await fetch("/api/team");
+        setTeam(await freshTeamRes.json());
+      }
     } catch (err: any) {
       alert(err.message);
     }
@@ -740,6 +975,7 @@ export default function AdminDashboard() {
             { id: "recognition", label: "Buddy Recognitions", icon: "🤝" },
             { id: "snapshots", label: "Gathering Snapshots", icon: "📸" },
             { id: "team", label: "Meet Our Team", icon: "👥" },
+            { id: "members", label: "Members", icon: "❤️" },
             { id: "rsvps", label: "Gatherings RSVPs", icon: "✓" }
           ].map((tab) => {
             const isActive = activeTab === tab.id;
@@ -814,7 +1050,15 @@ export default function AdminDashboard() {
                         key={sub.id} 
                         style={{
                           backgroundColor: "#1c1c1c",
-                          border: isRegister ? "1px solid rgba(199, 154, 75, 0.4)" : isRsvp ? "1px solid rgba(59, 130, 246, 0.4)" : "1px solid #333",
+                          border: isRegister 
+                            ? (sub.status === "approved" 
+                              ? "1px solid rgba(199, 154, 75, 0.8)" 
+                              : sub.status === "declined" 
+                                ? "1px solid rgba(143, 61, 41, 0.6)" 
+                                : "1px solid rgba(199, 154, 75, 0.4)")
+                            : isRsvp 
+                              ? "1px solid rgba(59, 130, 246, 0.4)" 
+                              : "1px solid #333",
                           borderRadius: "8px",
                           padding: "24px",
                           boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
@@ -838,25 +1082,78 @@ export default function AdminDashboard() {
                             <h3 style={{ fontSize: "18px", margin: "12px 0 4px 0", fontWeight: "normal", color: "white" }}>{sub.name}</h3>
                             <span style={{ fontSize: "13px", color: "rgba(246, 239, 228, 0.4)" }}>Submitted on {formatTime(sub.submittedAt)}</span>
                           </div>
-                          <a 
-                            href={waUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            style={{
-                              backgroundColor: "#25D366",
-                              color: "white",
-                              textDecoration: "none",
-                              padding: "10px 20px",
-                              borderRadius: "4px",
-                              fontSize: "14px",
-                              fontWeight: "bold",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "8px"
-                            }}
-                          >
-                            WhatsApp Admin Connect
-                          </a>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "10px" }}>
+                            <a 
+                              href={waUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{
+                                backgroundColor: "#25D366",
+                                color: "white",
+                                textDecoration: "none",
+                                padding: "8px 16px",
+                                borderRadius: "4px",
+                                fontSize: "13px",
+                                fontWeight: "bold",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "8px"
+                              }}
+                            >
+                              WhatsApp Admin Connect
+                            </a>
+                            {isRegister && (
+                              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                                {sub.status === "pending" ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleSubmissionAction(sub.id, "approve")}
+                                      style={{
+                                        padding: "6px 12px",
+                                        backgroundColor: "var(--gold, #c79a4b)",
+                                        color: "#121212",
+                                        border: "none",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontSize: "12px",
+                                        fontWeight: "bold"
+                                      }}
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => handleSubmissionAction(sub.id, "decline")}
+                                      style={{
+                                        padding: "6px 12px",
+                                        backgroundColor: "#8f3d29",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontSize: "12px"
+                                      }}
+                                    >
+                                      Decline
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span style={{
+                                    fontSize: "11px",
+                                    color: sub.status === "approved" ? "var(--gold, #c79a4b)" : "#8f3d29",
+                                    fontWeight: "bold",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.5px",
+                                    border: `1px solid ${sub.status === "approved" ? "var(--gold, #c79a4b)" : "#8f3d29"}`,
+                                    padding: "4px 10px",
+                                    borderRadius: "4px",
+                                    backgroundColor: sub.status === "approved" ? "rgba(199, 154, 75, 0.05)" : "rgba(143, 61, 41, 0.05)"
+                                  }}>
+                                    {sub.status === "approved" ? "✓ Approved & Team Registered" : "✗ Declined"}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Details Grid */}
@@ -1149,16 +1446,67 @@ export default function AdminDashboard() {
                   </div>
 
                   <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Photo Count Tag</label>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Photo Count Tag (Optional)</label>
                     <input
                       type="text"
-                      placeholder="e.g. 24 photos"
-                      required
+                      placeholder="e.g. 24 photos (auto-generated if empty)"
                       value={galleryForm.photos}
                       onChange={(e) => setGalleryForm({ ...galleryForm, photos: e.target.value })}
                       style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
                     />
                   </div>
+
+                  {/* Photo Upload Input */}
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>
+                      Upload Photos
+                    </label>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleGalleryImagesUpload}
+                      style={{ width: "100%", color: "rgba(246, 239, 228, 0.6)", fontSize: "13px" }}
+                    />
+                  </div>
+
+                  {galleryImages.length > 0 && (
+                    <div style={{ marginBottom: "20px" }}>
+                      <span style={{ display: "block", fontSize: "12px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "8px" }}>
+                        Selected Photos ({galleryImages.length})
+                      </span>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        {galleryImages.map((img, idx) => (
+                          <div key={idx} style={{ position: "relative", width: "50px", height: "50px" }}>
+                            <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "4px", border: "1px solid #444" }} />
+                            <button
+                              type="button"
+                              onClick={() => setGalleryImages(galleryImages.filter((_, i) => i !== idx))}
+                              style={{
+                                position: "absolute",
+                                top: "-4px",
+                                right: "-4px",
+                                backgroundColor: "#ef4444",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "50%",
+                                width: "16px",
+                                height: "16px",
+                                fontSize: "9px",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: 0
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Gradient & Decoration Picker */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
@@ -1230,46 +1578,109 @@ export default function AdminDashboard() {
               {/* List Gallery Items */}
               <div>
                 <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px" }}>Current Gallery Albums ({gallery.length})</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {gallery.map((item) => (
                     <div 
                       key={item.title}
                       style={{
                         backgroundColor: "#1c1c1c",
                         border: "1px solid #282828",
-                        borderRadius: "6px",
-                        padding: "16px 20px",
+                        borderRadius: "8px",
+                        padding: "24px",
                         display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center"
+                        flexDirection: "column",
+                        gap: "16px"
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                        <div style={{
-                          width: "36px",
-                          height: "36px",
-                          borderRadius: "4px",
-                          background: `linear-gradient(135deg, ${item.g1}, ${item.g2})`
-                        }}></div>
-                        <div>
-                          <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.5)" }}>{item.month}</span>
-                          <h4 style={{ margin: "2px 0 0 0", fontSize: "15px", fontWeight: "normal" }}>{item.title}</h4>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                          <div style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "4px",
+                            background: `linear-gradient(135deg, ${item.g1}, ${item.g2})`
+                          }}></div>
+                          <div>
+                            <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.5)" }}>{item.month}</span>
+                            <h4 style={{ margin: "2px 0 0 0", fontSize: "15px", fontWeight: "normal" }}>{item.title}</h4>
+                          </div>
                         </div>
+                        <button
+                          onClick={() => handleDeleteGallery(item.title)}
+                          style={{
+                            backgroundColor: "transparent",
+                            border: "1px solid #ef4444",
+                            color: "#ef4444",
+                            padding: "6px 12px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            fontSize: "12px"
+                          }}
+                        >
+                          Delete Album
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleDeleteGallery(item.title)}
-                        style={{
-                          backgroundColor: "transparent",
-                          border: "1px solid #ef4444",
-                          color: "#ef4444",
-                          padding: "6px 12px",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                          fontSize: "12px"
-                        }}
-                      >
-                        Delete
-                      </button>
+
+                      {/* Photo Gallery Grid */}
+                      <div style={{ borderTop: "1px solid #222", paddingTop: "16px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                          <span style={{ fontSize: "12px", color: "rgba(246, 239, 228, 0.6)" }}>
+                            Photos ({item.images ? item.images.length : 0})
+                          </span>
+                          <label style={{
+                            padding: "6px 12px",
+                            backgroundColor: "#2a2a2a",
+                            color: "var(--gold, #c79a4b)",
+                            border: "1px solid rgba(199, 154, 75, 0.3)",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            fontSize: "12px"
+                          }}>
+                            + Add Photos
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              style={{ display: "none" }}
+                              onChange={(e) => handleAddImagesToExistingGallery(item, e)}
+                            />
+                          </label>
+                        </div>
+
+                        {(!item.images || item.images.length === 0) ? (
+                          <p style={{ color: "rgba(246, 239, 228, 0.3)", fontSize: "12px", margin: "10px 0" }}>No photos uploaded yet.</p>
+                        ) : (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                            {item.images.map((img: string, imgIdx: number) => (
+                              <div key={imgIdx} style={{ position: "relative", width: "60px", height: "60px" }}>
+                                <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "4px", border: "1px solid #333" }} />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveImageFromGallery(item, imgIdx)}
+                                  style={{
+                                    position: "absolute",
+                                    top: "-4px",
+                                    right: "-4px",
+                                    backgroundColor: "rgba(0,0,0,0.8)",
+                                    color: "#ef4444",
+                                    border: "none",
+                                    borderRadius: "50%",
+                                    width: "16px",
+                                    height: "16px",
+                                    fontSize: "8px",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center"
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1696,60 +2107,309 @@ export default function AdminDashboard() {
 
               {/* Manage Team Members Grid */}
               <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
-                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Current Team Members ({team.length})</h3>
-                {team.length === 0 ? (
-                  <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No team members found.</p>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "600px", overflowY: "auto", paddingRight: "8px" }}>
-                    {team.map((m) => (
-                      <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                          {m.image ? (
-                            <img src={m.image} alt={m.name} style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "50%", border: "2px solid var(--gold)" }} />
-                          ) : (
-                            <div style={{ width: "50px", height: "50px", borderRadius: "50%", backgroundColor: "var(--gold)", color: "black", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>
-                              {m.name.charAt(0).toUpperCase()}
+                {(() => {
+                  const teamHosts = team.filter((m) => m.role !== "Member");
+                  return (
+                    <>
+                      <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Current Team Members ({teamHosts.length})</h3>
+                      {teamHosts.length === 0 ? (
+                        <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No team members found.</p>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "600px", overflowY: "auto", paddingRight: "8px" }}>
+                          {teamHosts.map((m) => (
+                            <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                                {m.image ? (
+                                  <img src={m.image} alt={m.name} style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "50%", border: "2px solid var(--gold)" }} />
+                                ) : (
+                                  <div style={{ width: "50px", height: "50px", borderRadius: "50%", backgroundColor: "var(--gold)", color: "black", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>
+                                    {m.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <div>
+                                  <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "normal" }}>{m.name}</h4>
+                                  <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>{m.role || "Volunteer"} · {m.location}</span>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", gap: "8px" }}>
+                                <button
+                                  onClick={() => handleEditTeamMember(m)}
+                                  style={{
+                                    padding: "6px 12px",
+                                    backgroundColor: "#333",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "12px"
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTeamMember(m.id)}
+                                  style={{
+                                    padding: "6px 12px",
+                                    backgroundColor: "#8f3d29",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "12px"
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
-                          )}
-                          <div>
-                            <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "normal" }}>{m.name}</h4>
-                            <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>{m.role || "Volunteer"} · {m.location}</span>
-                          </div>
+                          ))}
                         </div>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                          <button
-                            onClick={() => handleEditTeamMember(m)}
-                            style={{
-                              padding: "6px 12px",
-                              backgroundColor: "#333",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              fontSize: "12px"
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTeamMember(m.id)}
-                            style={{
-                              padding: "6px 12px",
-                              backgroundColor: "#8f3d29",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              fontSize: "12px"
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+            </div>
+          )}
+
+          {/* Members Tab */}
+          {activeTab === "members" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "40px", marginBottom: "40px" }}>
+              
+              {/* Add/Edit Member Form */}
+              <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>
+                  {memberForm.id ? "Edit Member" : "Add Member"}
+                </h3>
+                <form onSubmit={handleSaveMember}>
+                  
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={memberForm.name}
+                      onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      placeholder="e.g. Layla Hassan"
+                    />
                   </div>
-                )}
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Role</label>
+                    <input
+                      type="text"
+                      value={memberForm.role}
+                      onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      placeholder="e.g. Member"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Location</label>
+                    <input
+                      type="text"
+                      value={memberForm.location}
+                      onChange={(e) => setMemberForm({ ...memberForm, location: e.target.value })}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      placeholder="e.g. Palmera"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Bio</label>
+                    <textarea
+                      rows={3}
+                      value={memberForm.bio}
+                      onChange={(e) => setMemberForm({ ...memberForm, bio: e.target.value })}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white", resize: "vertical" }}
+                      placeholder="Layla is a member of the community..."
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Profile Photo</label>
+                    <input
+                      id="memberFileInput"
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          const file = e.target.files[0];
+                          const reader = new FileReader();
+                          reader.readAsDataURL(file);
+                          reader.onload = () => {
+                            setMemberImage(reader.result as string);
+                          };
+                        }
+                      }}
+                      style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                    />
+                    {memberImage && (
+                      <div style={{ marginTop: "10px", position: "relative", width: "80px", height: "80px" }}>
+                        <img src={memberImage} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%", border: "2px solid var(--gold)" }} />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMemberImage(null);
+                            const fileInput = document.getElementById("memberFileInput") as HTMLInputElement;
+                            if (fileInput) fileInput.value = "";
+                          }}
+                          style={{ position: "absolute", top: "-5px", right: "-5px", backgroundColor: "#8f3d29", color: "white", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginBottom: "24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Border Color 1</label>
+                      <select
+                        value={memberForm.g1}
+                        onChange={(e) => setMemberForm({ ...memberForm, g1: e.target.value })}
+                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      >
+                        <option value="#d9a48a">Terracotta Light (#d9a48a)</option>
+                        <option value="#b8533a">Terracotta (#b8533a)</option>
+                        <option value="#8f3d29">Terracotta Deep (#8f3d29)</option>
+                        <option value="#c79a4b">Gold (#c79a4b)</option>
+                        <option value="#6b6b3a">Olive Green (#6b6b3a)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "13px", color: "rgba(246, 239, 228, 0.6)", marginBottom: "6px" }}>Border Color 2</label>
+                      <select
+                        value={memberForm.g2}
+                        onChange={(e) => setMemberForm({ ...memberForm, g2: e.target.value })}
+                        style={{ width: "100%", padding: "10px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px", color: "white" }}
+                      >
+                        <option value="#b8533a">Terracotta (#b8533a)</option>
+                        <option value="#d9a48a">Terracotta Light (#d9a48a)</option>
+                        <option value="#8f3d29">Terracotta Deep (#8f3d29)</option>
+                        <option value="#c79a4b">Gold (#c79a4b)</option>
+                        <option value="#6b6b3a">Olive Green (#6b6b3a)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                      type="submit"
+                      style={{
+                        flex: 1,
+                        padding: "12px",
+                        backgroundColor: "var(--gold, #c79a4b)",
+                        color: "#121212",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                        fontSize: "14px"
+                      }}
+                    >
+                      {memberForm.id ? "Update Member" : "Add Member"}
+                    </button>
+                    {memberForm.id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMemberForm({
+                            id: "",
+                            name: "",
+                            role: "Member",
+                            location: "",
+                            bio: "",
+                            g1: "#d9a48a",
+                            g2: "#b8533a"
+                          });
+                          setMemberImage(null);
+                          const fileInput = document.getElementById("memberFileInput") as HTMLInputElement;
+                          if (fileInput) fileInput.value = "";
+                        }}
+                        style={{
+                          padding: "12px 20px",
+                          backgroundColor: "#333",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "14px"
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              {/* Manage Members Grid */}
+              <div style={{ backgroundColor: "#1c1c1c", borderRadius: "8px", padding: "32px", border: "1px solid #333" }}>
+                {(() => {
+                  const membersList = team.filter((m) => m.role === "Member");
+                  return (
+                    <>
+                      <h3 style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "20px", color: "var(--gold, #c79a4b)" }}>Current Members ({membersList.length})</h3>
+                      {membersList.length === 0 ? (
+                        <p style={{ color: "rgba(246, 239, 228, 0.4)" }}>No members found.</p>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "600px", overflowY: "auto", paddingRight: "8px" }}>
+                          {membersList.map((m) => (
+                            <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", backgroundColor: "#222", border: "1px solid #333", borderRadius: "4px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                                {m.image ? (
+                                  <img src={m.image} alt={m.name} style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "50%", border: "2px solid var(--gold)" }} />
+                                ) : (
+                                  <div style={{ width: "50px", height: "50px", borderRadius: "50%", backgroundColor: "var(--gold)", color: "black", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>
+                                    {m.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <div>
+                                  <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "normal" }}>{m.name}</h4>
+                                  <span style={{ fontSize: "11px", color: "rgba(246, 239, 228, 0.4)" }}>{m.role} · {m.location}</span>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", gap: "8px" }}>
+                                <button
+                                  onClick={() => handleEditMember(m)}
+                                  style={{
+                                    padding: "6px 12px",
+                                    backgroundColor: "#333",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "12px"
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTeamMember(m.id)}
+                                  style={{
+                                    padding: "6px 12px",
+                                    backgroundColor: "#8f3d29",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "12px"
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
             </div>

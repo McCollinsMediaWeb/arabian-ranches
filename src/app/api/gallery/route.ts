@@ -14,7 +14,7 @@ export async function GET() {
   }
 }
 
-// POST: Add new gallery item (authorized)
+// POST: Add or update gallery item (authorized)
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get("x-admin-password");
@@ -23,19 +23,37 @@ export async function POST(request: NextRequest) {
     }
 
     const newItem = await request.json();
-    const { month, title, meta, photos, g1, g2, deco } = newItem;
+    const { month, title, meta, photos, g1, g2, deco, images } = newItem;
 
     if (!month || !title || !meta || !photos || !g1 || !g2 || !deco) {
       return Response.json({ message: "Missing required fields" }, { status: 400 });
     }
 
     const gallery = await getGallery();
-    gallery.unshift({ month, title, meta, photos, g1, g2, deco }); // Add new items at the top
+    const existingIndex = gallery.findIndex((item: any) => item.title === title);
+
+    if (existingIndex > -1) {
+      // Update existing
+      gallery[existingIndex] = {
+        month,
+        title,
+        meta,
+        photos,
+        g1,
+        g2,
+        deco,
+        images: images || gallery[existingIndex].images || []
+      };
+    } else {
+      // Add new
+      gallery.unshift({ month, title, meta, photos, g1, g2, deco, images: images || [] });
+    }
+    
     await saveGallery(gallery);
 
-    return Response.json({ message: "Gallery item added successfully" }, { status: 201 });
+    return Response.json({ message: "Gallery item saved successfully" }, { status: 200 });
   } catch (error: any) {
-    return Response.json({ message: "Failed to add gallery item", error: error.message }, { status: 500 });
+    return Response.json({ message: "Failed to save gallery item", error: error.message }, { status: 500 });
   }
 }
 

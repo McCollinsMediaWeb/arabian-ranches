@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface GalleryItem {
   month: string;
@@ -11,6 +11,7 @@ interface GalleryItem {
   g1: string;
   g2: string;
   deco: "mezze" | "yarn" | "leaves" | "flower";
+  images?: string[];
 }
 
 const decoSVGs: Record<string, React.ReactNode> = {
@@ -131,6 +132,8 @@ const decoSVGs: Record<string, React.ReactNode> = {
 export function Gallery() {
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAlbum, setSelectedAlbum] = useState<GalleryItem | null>(null);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   useEffect(() => {
     fetch("/api/gallery")
@@ -144,6 +147,33 @@ export function Gallery() {
         setLoading(false);
       });
   }, []);
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    if (!selectedAlbum) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectedAlbum(null);
+      
+      const images = selectedAlbum.images;
+      if (!images || images.length <= 1) return;
+
+      if (e.key === "ArrowLeft") {
+        setPhotoIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+      }
+      if (e.key === "ArrowRight") {
+        setPhotoIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedAlbum]);
+
+  const handleCardClick = (item: GalleryItem) => {
+    if (item.images && item.images.length > 0) {
+      setSelectedAlbum(item);
+      setPhotoIndex(0);
+    }
+  };
 
   const containerVariants = {
     hidden: {},
@@ -213,32 +243,236 @@ export function Gallery() {
           </div>
         ) : (
           <motion.div className="gallery-grid" id="galleryGrid" variants={containerVariants}>
-            {galleryItems.map((item, idx) => (
-              <motion.div
-                className="gallery-card"
-                key={idx}
-                variants={cardVariants}
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as const }}
-              >
-                <div
-                  className="bg"
-                  style={{
-                    background: `linear-gradient(135deg, ${item.g1}, ${item.g2})`,
-                  }}
-                ></div>
-                {decoSVGs[item.deco]}
-                <span className="gallery-photo-tag">{item.photos}</span>
-                <div className="gallery-overlay">
-                  <span className="g-month">{item.month}</span>
-                  <h4>{item.title}</h4>
-                  <p>{item.meta}</p>
-                </div>
-              </motion.div>
-            ))}
+            {galleryItems.map((item, idx) => {
+              const hasPhotos = item.images && item.images.length > 0;
+              return (
+                <motion.div
+                  className="gallery-card"
+                  key={idx}
+                  variants={cardVariants}
+                  whileHover={hasPhotos ? { scale: 1.02, y: -4 } : { scale: 1.01 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as const }}
+                  style={{ cursor: hasPhotos ? "pointer" : "default" }}
+                  onClick={() => handleCardClick(item)}
+                >
+                  <div
+                    className="bg"
+                    style={{
+                      background: `linear-gradient(135deg, ${item.g1}, ${item.g2})`,
+                    }}
+                  ></div>
+                  {decoSVGs[item.deco]}
+                  <span className="gallery-photo-tag">{item.photos}</span>
+                  <div className="gallery-overlay">
+                    <span className="g-month">{item.month}</span>
+                    <h4>{item.title}</h4>
+                    <p>{item.meta}</p>
+                    {hasPhotos && (
+                      <span style={{ fontSize: "11px", color: "var(--gold)", display: "block", marginTop: "10px", textTransform: "uppercase", letterSpacing: "1px" }}>
+                        View Album ➔
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
           </motion.div>
         )}
       </div>
+
+      {/* Lightbox Modal for Gallery Album */}
+      <AnimatePresence>
+        {selectedAlbum && selectedAlbum.images && selectedAlbum.images.length > 0 && (() => {
+          const images = selectedAlbum.images;
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(10, 10, 10, 0.95)",
+                backdropFilter: "blur(15px)",
+                zIndex: 99999,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "20px",
+                userSelect: "none"
+              }}
+              onClick={() => setSelectedAlbum(null)}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedAlbum(null)}
+                style={{
+                  position: "absolute",
+                  top: "24px",
+                  right: "24px",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "48px",
+                  height: "48px",
+                  color: "var(--cream, #f6efe4)",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s",
+                  zIndex: 10
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)"}
+              >
+                ✕
+              </button>
+
+              {/* Left Arrow */}
+              {images.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPhotoIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                  }}
+                  style={{
+                    position: "absolute",
+                    left: "24px",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: "48px",
+                    height: "48px",
+                    color: "var(--cream, #f6efe4)",
+                    fontSize: "20px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.2s",
+                    zIndex: 10
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)"}
+                >
+                  ‹
+                </button>
+              )}
+
+              {/* Right Arrow */}
+              {images.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPhotoIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                  }}
+                  style={{
+                    position: "absolute",
+                    right: "24px",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: "48px",
+                    height: "48px",
+                    color: "var(--cream, #f6efe4)",
+                    fontSize: "20px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.2s",
+                    zIndex: 10
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)"}
+                >
+                  ›
+                </button>
+              )}
+
+              {/* Main Image Container */}
+              <div 
+                style={{
+                  position: "relative",
+                  maxWidth: "85vw",
+                  maxHeight: "72vh",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <img
+                  src={images[photoIndex]}
+                  alt=""
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "72vh",
+                    objectFit: "contain",
+                    borderRadius: "8px",
+                    boxShadow: "0 20px 50px rgba(0,0,0,0.8)"
+                  }}
+                />
+              </div>
+
+              {/* Photo Info / Indicator */}
+              <div style={{ marginTop: "20px", textAlign: "center" }}>
+                <span style={{ color: "var(--gold, #c79a4b)", fontSize: "14px", textTransform: "uppercase", letterSpacing: "1px" }}>
+                  {selectedAlbum.title}
+                </span>
+                <p style={{ color: "rgba(246, 239, 228, 0.6)", fontSize: "12px", marginTop: "4px" }}>
+                  Photo {photoIndex + 1} of {images.length}
+                </p>
+              </div>
+
+              {/* Thumbnails strip */}
+              {images.length > 1 && (
+                <div 
+                  style={{
+                    position: "absolute",
+                    bottom: "30px",
+                    display: "flex",
+                    gap: "8px",
+                    maxWidth: "80%",
+                    overflowX: "auto",
+                    padding: "10px",
+                    backgroundColor: "rgba(20, 20, 20, 0.6)",
+                    borderRadius: "30px",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                    backdropFilter: "blur(5px)"
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {images.map((img, index) => (
+                    <img
+                      key={index}
+                      src={img}
+                      alt=""
+                      onClick={() => setPhotoIndex(index)}
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        objectFit: "cover",
+                        borderRadius: "50%",
+                        cursor: "pointer",
+                        border: index === photoIndex ? "2px solid var(--gold, #c79a4b)" : "2px solid transparent",
+                        opacity: index === photoIndex ? 1 : 0.4,
+                        transition: "all 0.2s"
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </motion.section>
   );
 }

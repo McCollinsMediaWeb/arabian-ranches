@@ -241,8 +241,13 @@ export async function ensureInitialized() {
         photos VARCHAR(20),
         g1 VARCHAR(10),
         g2 VARCHAR(10),
-        deco VARCHAR(20)
+        deco VARCHAR(20),
+        images JSONB DEFAULT '[]'::jsonb
       )
+    `);
+
+    await client.query(`
+      ALTER TABLE gallery ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'::jsonb
     `);
 
     await client.query(`
@@ -269,8 +274,13 @@ export async function ensureInitialized() {
         learn_list JSONB,
         help_list JSONB,
         need_list JSONB,
-        note TEXT
+        note TEXT,
+        status VARCHAR(20) DEFAULT 'pending'
       )
+    `);
+
+    await client.query(`
+      ALTER TABLE submissions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'
     `);
 
     await client.query(`
@@ -514,7 +524,16 @@ export async function saveEvents(events: any[]) {
 export async function getGallery() {
   await ensureInitialized();
   const res = await pool.query("SELECT * FROM gallery");
-  return res.rows;
+  return res.rows.map((row: any) => ({
+    month: row.month,
+    title: row.title,
+    meta: row.meta,
+    photos: row.photos,
+    g1: row.g1,
+    g2: row.g2,
+    deco: row.deco,
+    images: row.images ? (typeof row.images === "string" ? JSON.parse(row.images) : row.images) : []
+  }));
 }
 
 export async function saveGallery(gallery: any[]) {
@@ -525,8 +544,17 @@ export async function saveGallery(gallery: any[]) {
     await client.query("DELETE FROM gallery");
     for (const item of gallery) {
       await client.query(
-        "INSERT INTO gallery (month, title, meta, photos, g1, g2, deco) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-        [item.month, item.title, item.meta, item.photos, item.g1, item.g2, item.deco]
+        "INSERT INTO gallery (month, title, meta, photos, g1, g2, deco, images) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        [
+          item.month,
+          item.title,
+          item.meta,
+          item.photos,
+          item.g1,
+          item.g2,
+          item.deco,
+          JSON.stringify(item.images || [])
+        ]
       );
     }
     await client.query("COMMIT");
@@ -574,7 +602,8 @@ export async function getSubmissions() {
     learnList: row.learn_list || [],
     helpList: row.help_list || [],
     needList: row.need_list || [],
-    note: row.note
+    note: row.note,
+    status: row.status || "pending"
   }));
 }
 
@@ -582,8 +611,8 @@ export async function saveSubmission(submission: any) {
   await ensureInitialized();
   await pool.query(
     `INSERT INTO submissions (
-      id, submitted_at, form_type, name, phone, email, address, age, registering, free, often, share_list, learn_list, help_list, need_list, note
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+      id, submitted_at, form_type, name, phone, email, address, age, registering, free, often, share_list, learn_list, help_list, need_list, note, status
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
     [
       submission.id,
       submission.submittedAt || new Date().toISOString(),
@@ -600,9 +629,20 @@ export async function saveSubmission(submission: any) {
       JSON.stringify(submission.learnList || []),
       JSON.stringify(submission.helpList || []),
       JSON.stringify(submission.needList || []),
-      submission.note || null
+      submission.note || null,
+      submission.status || "pending"
     ]
   );
+}
+
+export async function updateSubmissionStatus(id: string, status: string) {
+  await ensureInitialized();
+  const res = await pool.query(
+    "UPDATE submissions SET status = $1 WHERE id = $2 RETURNING *",
+    [status, id]
+  );
+  if (res.rows.length === 0) return null;
+  return res.rows[0];
 }
 
 // Snapshots DB functions
