@@ -62,6 +62,7 @@ export function Team() {
   const [loading, setLoading] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [cardWidth, setCardWidth] = useState(300);
+  const [isMobile, setIsMobile] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
   const tweenRef = useRef<gsap.core.Tween | null>(null);
 
@@ -84,6 +85,16 @@ export function Team() {
       });
   }, []);
 
+  // Check if we are on a mobile/tablet viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   // Update card width dynamically on resize
   const updateCardWidth = () => {
     if (!sliderRef.current) return;
@@ -99,18 +110,18 @@ export function Team() {
     return () => window.removeEventListener("resize", updateCardWidth);
   }, [loading, teamMembers]);
 
-  // Center initial scroll position to the middle set of cards
+  // Center initial scroll position to the middle set of cards (only on desktop)
   useEffect(() => {
-    if (loading || teamMembers.length === 0 || !sliderRef.current) return;
+    if (loading || teamMembers.length === 0 || !sliderRef.current || isMobile) return;
     const container = sliderRef.current;
     const gap = 28;
     const W = (cardWidth + gap) * teamMembers.length;
     container.scrollLeft = W;
-  }, [loading, teamMembers, cardWidth]);
+  }, [loading, teamMembers, cardWidth, isMobile]);
 
   // Marquee animation player
   const playMarquee = () => {
-    if (!sliderRef.current || teamMembers.length === 0) return;
+    if (!sliderRef.current || teamMembers.length === 0 || isMobile) return;
     const container = sliderRef.current;
     const gap = 28;
     const W = (cardWidth + gap) * teamMembers.length;
@@ -142,6 +153,11 @@ export function Team() {
   useEffect(() => {
     if (loading || teamMembers.length === 0) return;
 
+    if (isMobile) {
+      if (tweenRef.current) tweenRef.current.kill();
+      return;
+    }
+
     if (isHovered) {
       if (tweenRef.current) tweenRef.current.pause();
     } else {
@@ -151,11 +167,11 @@ export function Team() {
     return () => {
       if (tweenRef.current) tweenRef.current.kill();
     };
-  }, [isHovered, loading, teamMembers, cardWidth]);
+  }, [isHovered, loading, teamMembers, cardWidth, isMobile]);
 
-  // Manual Next/Prev action using GSAP smooth transitions
+  // Manual Next/Prev action using GSAP smooth transitions (only on desktop)
   const scroll = (direction: "left" | "right") => {
-    if (!sliderRef.current) return;
+    if (!sliderRef.current || isMobile) return;
     const container = sliderRef.current;
     const gap = 28;
     const scrollAmount = cardWidth + gap;
@@ -183,10 +199,10 @@ export function Team() {
     });
   };
 
-  // Boundary loop listener for manual swiping/dragging
+  // Boundary loop listener for manual swiping/dragging (only on desktop)
   useEffect(() => {
     const container = sliderRef.current;
-    if (!container || loading || teamMembers.length === 0) return;
+    if (!container || loading || teamMembers.length === 0 || isMobile) return;
 
     const checkLoop = () => {
       const gap = 28;
@@ -201,7 +217,7 @@ export function Team() {
 
     container.addEventListener("scroll", checkLoop);
     return () => container.removeEventListener("scroll", checkLoop);
-  }, [loading, teamMembers, cardWidth]);
+  }, [loading, teamMembers, cardWidth, isMobile]);
 
   const containerVariants = {
     hidden: {},
@@ -266,7 +282,7 @@ export function Team() {
           onTouchEnd={() => setIsHovered(false)}
         >
           <AnimatePresence>
-            {isHovered && (
+            {isHovered && !isMobile && (
               <>
                 <motion.button
                   key="prev-btn"
@@ -297,11 +313,11 @@ export function Team() {
           </AnimatePresence>
 
           <motion.div
-            className={`team-slider ${isHovered ? "snapping" : ""}`}
+            className={`team-slider ${isHovered && !isMobile ? "snapping" : ""}`}
             ref={sliderRef}
             variants={containerVariants}
           >
-            {[...teamMembers, ...teamMembers, ...teamMembers].map((member, idx) => (
+            {(isMobile ? teamMembers : [...teamMembers, ...teamMembers, ...teamMembers]).map((member, idx) => (
               <motion.div
                 className="team-card"
                 key={`${member.id || idx}-${idx}`}

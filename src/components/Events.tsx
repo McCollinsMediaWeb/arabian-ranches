@@ -430,6 +430,7 @@ export function Events() {
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.95, y: 15, opacity: 0 }}
               transition={{ type: "spring", damping: 30, stiffness: 400 }}
+              className="events-rsvp-modal"
               style={{
                 backgroundColor: "#1c1c1c",
                 border: "1px solid var(--gold, #c79a4b)",
@@ -610,6 +611,7 @@ export function Events() {
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.95, y: 15, opacity: 0 }}
               transition={{ type: "spring", damping: 30, stiffness: 400 }}
+              className="events-rsvp-modal"
               style={{
                 backgroundColor: "#1c1c1c",
                 border: "1px solid var(--gold, #c79a4b)",
@@ -721,7 +723,7 @@ export function Events() {
                 </div>
 
                 {/* Submit Button */}
-                <div style={{ display: "flex", gap: "12px" }}>
+                <div className="rsvp-button-row" style={{ display: "flex", gap: "12px" }}>
                   <motion.button
                     type="submit"
                     disabled={rsvpSubmitLoading}

@@ -39,6 +39,7 @@ export function FormPopup({ isOpen, isSuccess, message, onClose }: FormPopupProp
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 400 }}
+            className="form-popup-modal"
             style={{
               backgroundColor: "#1c1c1c",
               border: isSuccess ? "1px solid var(--gold, #c79a4b)" : "1px solid #ef4444",
